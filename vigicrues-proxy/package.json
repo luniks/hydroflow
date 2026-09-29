@@ -1,0 +1,13 @@
+{
+  "name": "vigicrues-proxy",
+  "version": "0.1",
+  "description": "Proxy CORS + cache pour l'API Vigicrues (InfoVigiCru.geojson)",
+  "type": "module",
+  "main": "server.js",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "license": "GPLv3"
+}
