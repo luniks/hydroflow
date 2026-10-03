@@ -19,11 +19,11 @@ const githubIcon = computed(() => (theme.theme.value === "light" ? "https://cdn.
       <span class="text-base font-bold">HydroFlow <span class="ml-[5px] mr-[1px]">v</span>0.2</span>
     </a>
     <div class="footer-links flex items-center gap-2 flex-wrap justify-center">
-      <span>Données ouvertes :</span>
+      <span>Données ouvertes</span>
       <span class="flex items-center gap-2 flex-wrap justify-center">
-        <a class="footer-link rounded-lg transition px-2 py-1" href="https://hubeau.eaufrance.fr/page/api-hydrometrie" target="_blank" rel="noopener noreferrer"><strong>Hub'Eau Hydrométrie</strong></a> •
-        <a class="footer-link rounded-lg transition px-2 py-1" href="https://www.vigicrues.gouv.fr/" target="_blank" rel="noopener noreferrer"><strong>Vigicrues</strong></a> •
-        <a class="footer-link rounded-lg transition px-2 py-1" href="https://meteofrance.com/" target="_blank" rel="noopener noreferrer"><strong>Météo-France</strong></a>
+        <a class="footer-link rounded-lg transition px-1 py-1" href="https://hubeau.eaufrance.fr/page/api-hydrometrie" target="_blank" rel="noopener noreferrer"><strong>Hub'Eau Hydrométrie</strong></a> •
+        <a class="footer-link rounded-lg transition px-1 py-1" href="https://www.vigicrues.gouv.fr/" target="_blank" rel="noopener noreferrer"><strong>Vigicrues</strong></a> •
+        <a class="footer-link rounded-lg transition px-1 py-1" href="https://meteofrance.com/" target="_blank" rel="noopener noreferrer"><strong>Météo-France</strong></a>
       </span>
     </div>
   </footer>

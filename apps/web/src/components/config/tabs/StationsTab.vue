@@ -399,7 +399,7 @@ function remove(code: string) {
   display: flex;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .cfg-add__fields {
     grid-template-columns: 1fr;
   }

@@ -187,7 +187,7 @@ onBeforeUnmount(() => lockScroll(false))
 }
 
 /* Mobile : la modale occupe tout l'écran, comme dans legacy/index.html */
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .ui-modal {
     padding: 0;
     place-items: stretch;

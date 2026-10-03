@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { errorMessage } from '@/api/http'
 import { fetchVigicrues, type VigicruesInfo } from '@/api/vigicrues'
 import { pluralize } from '@/domain/format'
+import type { RainPoint } from '@/domain/types'
 import { partialState, useApiHealth } from './useApiHealth'
 import { useRain } from './useRain'
 import { useStations } from './useStations'
@@ -32,9 +33,7 @@ export function useDataLoader() {
     }
   }
 
-  async function loadRain() {
-    rain.syncStates()
-    await rain.load()
+  function syncRainHealth() {
     const points = rain.visiblePoints.value
     const ko = points.filter((p) => rain.states[p.key]?.error)
     api.set(
@@ -48,6 +47,39 @@ export function useDataLoader() {
     )
   }
 
+  function syncHubeauHealth() {
+    const ko = stations.value.filter((s) => states[s.code]?.error)
+    api.set(
+      'hubeau',
+      partialState(stations.value.length - ko.length, stations.value.length),
+      !stations.value.length
+        ? 'Aucune station suivie.'
+        : ko.length
+          ? `${ko.length} ${pluralize(ko.length, 'station')} en erreur : ${ko
+              .map((s) => states[s.code]?.name || s.fallbackName)
+              .join(', ')}`
+          : `${stations.value.length} ${pluralize(stations.value.length, 'station')} à jour.`,
+    )
+  }
+
+  async function loadRain() {
+    rain.syncStates()
+    await rain.load()
+    syncRainHealth()
+  }
+
+  async function refreshStation(code: string) {
+    const station = stations.value.find((s) => s.code === code)
+    if (!station) return
+    await loadStation(station, hours.value, offsetSteps.value)
+    syncHubeauHealth()
+  }
+
+  async function refreshRainPoint(point: RainPoint) {
+    await rain.load([point])
+    syncRainHealth()
+  }
+
   async function loadAll() {
     if (loading.value) return
     loading.value = true
@@ -59,23 +91,21 @@ export function useDataLoader() {
         loadVigicrues(),
       ])
 
-      const ko = stations.value.filter((s) => states[s.code]?.error)
-      api.set(
-        'hubeau',
-        partialState(stations.value.length - ko.length, stations.value.length),
-        !stations.value.length
-          ? 'Aucune station suivie.'
-          : ko.length
-            ? `${ko.length} ${pluralize(ko.length, 'station')} en erreur : ${ko
-                .map((s) => states[s.code]?.name || s.fallbackName)
-                .join(', ')}`
-            : `${stations.value.length} ${pluralize(stations.value.length, 'station')} à jour.`,
-      )
+      syncHubeauHealth()
       lastUpdate.value = new Date()
     } finally {
       loading.value = false
     }
   }
 
-  return { loading, lastUpdate, vigicrues, loadAll, loadRain, loadVigicrues }
+  return {
+    loading,
+    lastUpdate,
+    vigicrues,
+    loadAll,
+    loadRain,
+    loadVigicrues,
+    refreshStation,
+    refreshRainPoint,
+  }
 }

@@ -87,8 +87,8 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
     <header class="card__head">
       <div class="card__titles">
         <h3 class="card__title">{{ name }}</h3>
-        <div class="flex gap-1">
-          <BaseBadge v-if="isReference" tone="accent"><BaseIcon name="star" /> Référence</BaseBadge>
+        <div class="card__sub-row">
+          <BaseBadge v-if="isReference" tone="accent" class="card__ref-badge"><BaseIcon name="star" /> Référence</BaseBadge>
           <p class="card__subtitle">{{ station.code }} · {{ label }}</p>
         </div>
       </div>
@@ -208,8 +208,20 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
   white-space: nowrap;
 }
 
+.card__sub-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.card__ref-badge {
+  flex-shrink: 0;
+}
+
 .card__subtitle {
   margin: 2px 0 0;
+  min-width: 0;
   color: var(--muted);
   font-size: 0.8rem;
 }

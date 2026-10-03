@@ -17,8 +17,14 @@ const emit = defineEmits<{ close: []; saved: [] }>()
 const { draft, cancel, commit, resetStations, resetRainExternal } = useConfigDraft()
 
 const TABS = computed(() => [
-  { id: 'stations', label: 'Stations suivies', icon: 'pin' as const, count: draft.stations.length },
-  { id: 'seuils', label: 'Seuils', icon: 'bolt' as const },
+  {
+    id: 'stations',
+    label: 'Stations suivies',
+    shortLabel: 'Stations',
+    icon: 'pin' as const,
+    count: draft.stations.length,
+  },
+  { id: 'seuils', label: "Seuils d'exploitation", shortLabel: 'Seuils', icon: 'bolt' as const },
   { id: 'pluie', label: 'Pluviométrie', icon: 'cloud' as const },
 ])
 
@@ -90,13 +96,30 @@ function resetAll() {
       <p class="cfg-foot__error" role="alert">{{ saveError ?? '' }}</p>
       <div class="cfg-foot__btns">
         <BaseButton variant="ghost" @click="onCancel">Annuler</BaseButton>
-        <BaseButton icon="check" @click="onSave">Enregistrer</BaseButton>
+        <BaseButton icon="check" @click="onSave">
+          <span class="cfg-save-label--short">Enregistrer</span>
+          <span class="cfg-save-label--full">Enregistrer les modifications</span>
+        </BaseButton>
       </div>
     </template>
   </BaseModal>
 </template>
 
 <style scoped>
+.cfg-save-label--full {
+  display: none;
+}
+
+@media (min-width: 560px) {
+  .cfg-save-label--short {
+    display: none;
+  }
+
+  .cfg-save-label--full {
+    display: inline;
+  }
+}
+
 .cfg-foot__error {
   margin: 0;
   flex: 1;
@@ -111,7 +134,7 @@ function resetAll() {
   margin-left: auto;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .cfg-foot__error {
     flex-basis: 100%;
   }

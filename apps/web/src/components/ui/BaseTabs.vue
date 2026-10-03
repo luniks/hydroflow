@@ -6,6 +6,7 @@ import type { IconName } from './icons'
 export interface TabDef {
   id: string
   label: string
+  shortLabel?: string
   icon?: IconName
   count?: number
 }
@@ -67,7 +68,8 @@ function onKeydown(e: KeyboardEvent, index: number) {
         @keydown="onKeydown($event, index)"
       >
         <BaseIcon v-if="tab.icon" :name="tab.icon" />
-        {{ tab.label }}
+        <span v-if="tab.shortLabel" class="ui-tabs__label-short">{{ tab.shortLabel }}</span>
+        <span :class="tab.shortLabel ? 'ui-tabs__label-full' : undefined">{{ tab.label }}</span>
         <span v-if="tab.count !== undefined" class="ui-tabs__count">{{ tab.count }}</span>
       </button>
     </div>
@@ -141,6 +143,20 @@ function onKeydown(e: KeyboardEvent, index: number) {
 .ui-tabs__tab[aria-selected='true'] .ui-tabs__count {
   background: rgba(56, 189, 248, 0.15);
   color: var(--accent);
+}
+
+.ui-tabs__label-full {
+  display: none;
+}
+
+@media (min-width: 560px) {
+  .ui-tabs__label-short {
+    display: none;
+  }
+
+  .ui-tabs__label-full {
+    display: inline;
+  }
 }
 
 .ui-tabs__panel {

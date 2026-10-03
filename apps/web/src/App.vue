@@ -2,11 +2,8 @@
 import { onMounted, onScopeDispose, ref, watch } from 'vue'
 import { useAutoRefresh } from '@/composables/useAutoRefresh'
 import { useDataLoader } from '@/composables/useDataLoader'
-import { useRain } from '@/composables/useRain'
-import { useStations } from '@/composables/useStations'
 import { useTheme } from '@/composables/useTheme'
 import { useTimeRange } from '@/composables/useTimeRange'
-import type { RainPoint } from '@/domain/types'
 import AppFooter from '@/components/layout/AppFooter.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import ConfigModal from '@/components/config/ConfigModal.vue'
@@ -16,10 +13,8 @@ import StationGrid from '@/components/station/StationGrid.vue'
 
 useTheme()
 
-const { stations, loadStation } = useStations()
-const rain = useRain()
 const { hours, offsetSteps } = useTimeRange()
-const { loading, vigicrues, loadAll } = useDataLoader()
+const { loading, vigicrues, loadAll, refreshStation, refreshRainPoint } = useDataLoader()
 
 useAutoRefresh(loadAll)
 
@@ -36,15 +31,6 @@ const configTab = ref('stations')
 function openConfig(tab = 'stations') {
   configTab.value = tab
   configOpen.value = true
-}
-
-function refreshStation(code: string) {
-  const station = stations.value.find((s) => s.code === code)
-  if (station) void loadStation(station, hours.value, offsetSteps.value)
-}
-
-function refreshRainPoint(point: RainPoint) {
-  void rain.load([point])
 }
 
 // Tout changement de fenetre temporelle impose un rechargement des series.

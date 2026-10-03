@@ -391,7 +391,7 @@ function toggleAddForm() {
   grid-column: 1 / -1;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .rc-manual__grid,
   .rc-search {
     grid-template-columns: 1fr;
