@@ -78,6 +78,46 @@ const id = useId()
   padding-top: var(--space-section);
 }
 
+/* Wide screens: title, subtitle and actions share the same row. */
+@media (min-width: 641px) {
+  .ui-collapse:has(.ui-collapse__subtitle) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: 24px;
+  }
+
+  .ui-collapse:has(.ui-collapse__subtitle) .ui-collapse__head {
+    display: contents;
+  }
+
+  .ui-collapse:has(.ui-collapse__subtitle) .ui-collapse__toggle {
+    align-items: baseline;
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .ui-collapse:has(.ui-collapse__subtitle) .ui-collapse__chevron {
+    align-self: center;
+  }
+
+  .ui-collapse:has(.ui-collapse__subtitle) .ui-collapse__subtitle {
+    grid-column: 2;
+    grid-row: 1;
+    margin-top: 0;
+  }
+
+  .ui-collapse:has(.ui-collapse__subtitle) .ui-collapse__actions {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .ui-collapse:has(.ui-collapse__subtitle) .ui-collapse__body {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ui-collapse__chevron {
     transition: none;

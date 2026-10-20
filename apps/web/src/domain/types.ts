@@ -39,10 +39,16 @@ export interface StationState {
 
 export interface ExploitConfig {
   refCode: string
-  dmin: number
-  max: number
+  /** Debit minimal turbinable (m³/s) : en dessous, la turbine s'arrete. */
+  minFlow: number
+  /** Debit a partir duquel la turbine peut demarrer (m³/s), compris entre `minFlow` et `maxFlow`. */
+  startFlow: number
+  /** Debit maximum turbinable (m³/s) : au-dessus, la turbine s'arrete. */
+  maxFlow: number
   optMin: number
   optMax: number
+  /** Duree (min) que met le debit de la station de reference pour arriver a la turbine. */
+  propagationMin: number
 }
 
 export type ZoneId = 'stop-low' | 'run-low' | 'opt' | 'run-high' | 'stop-high'
@@ -53,6 +59,41 @@ export interface Zone {
   state: ZoneState
   label: string
   zoneName: string
+}
+
+/** Etat suppose de la turbine, deduit de l'historique du debit (l'application ne le mesure pas). */
+export type TurbineState = 'run' | 'stop'
+
+export type OutlookKind =
+  | 'unknown'
+  | 'stale'
+  | 'run-stable'
+  | 'run-watch'
+  | 'stop-expected'
+  | 'stop-now'
+  | 'stopped-stable'
+  | 'stopped-watch'
+  | 'stopped-blocked'
+  | 'start-expected'
+  | 'start-now'
+
+export type OutlookStability = 'stable' | 'watch' | 'changing'
+
+/** Provenance d'une echeance : debit deja mesure en amont, ou extrapole depuis la tendance. */
+export type OutlookSource = 'observed' | 'estimated'
+
+export interface TurbineOutlook {
+  kind: OutlookKind
+  tone: 'neutral' | 'ok' | 'warn' | 'danger' | 'accent'
+  /** `null` quand aucune prevision n'est possible (pas de mesure, mesure trop ancienne). */
+  stability: OutlookStability | null
+  /** Etat de la turbine suppose pour la prevision ; `null` si aucune prevision. */
+  turbine: TurbineState | null
+  /** Delai avant le changement d'etat prevu, en minutes. */
+  inMinutes: number | null
+  source: OutlookSource | null
+  headline: string
+  detail: string | null
 }
 
 export type TrendDirection = 'up' | 'down' | 'flat'
