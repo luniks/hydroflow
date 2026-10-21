@@ -66,10 +66,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
         </BaseBadge>
         <BaseSpinner v-if="state.fetching" />
         <BaseButton
+          v-if="!state.fetching"
           variant="icon"
           icon="refresh"
           aria-label="Rafraîchir ce point"
-          :disabled="state.fetching"
           @click="emit('refresh', point)"
         />
         <div ref="menuRoot" class="rain-card__menu">
@@ -114,6 +114,8 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
       :window-start-ms="window.startMs"
       :window-end-ms="window.endMs"
       :now-ms="nowMs"
+      :title="point.name"
+      :subtitle="['Cumuls de pluie horaires', point.context].filter(Boolean).join(' · ')"
     />
 
     <p class="rain-card__total">Cumul total estimé : {{ fmtMm(totals.total) }} mm</p>

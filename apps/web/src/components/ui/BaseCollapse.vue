@@ -5,17 +5,23 @@ import BaseIcon from './BaseIcon.vue'
 defineProps<{ title: string }>()
 const collapsed = defineModel<boolean>({ required: true })
 const id = useId()
+
+// Seule la ligne de titre (titre, sous-titre, actions) replie la section, pas son contenu.
+function onClick(event: MouseEvent) {
+  if ((event.target as HTMLElement).closest('.ui-collapse__head, .ui-collapse__subtitle')) {
+    collapsed.value = !collapsed.value
+  }
+}
 </script>
 
 <template>
-  <div class="ui-collapse" :class="{ 'is-collapsed': collapsed }">
+  <div class="ui-collapse" :class="{ 'is-collapsed': collapsed }" @click="onClick">
     <div class="ui-collapse__head">
       <button
         type="button"
         class="ui-collapse__toggle"
         :aria-expanded="!collapsed"
         :aria-controls="id"
-        @click="collapsed = !collapsed"
       >
         <BaseIcon name="chevDown" class="ui-collapse__chevron" />
         <span>{{ title }}</span>
@@ -28,6 +34,14 @@ const id = useId()
 </template>
 
 <style scoped>
+.ui-collapse {
+  padding: var(--space-card);
+}
+
+.ui-collapse__head,
+.ui-collapse__subtitle {
+  cursor: pointer;
+}
 .ui-collapse__head {
   display: flex;
   align-items: center;
@@ -76,6 +90,46 @@ const id = useId()
 
 .ui-collapse__body {
   padding-top: var(--space-section);
+}
+
+/* Wide screens: title, subtitle and actions share the same row. */
+@media (min-width: 641px) {
+  .ui-collapse:has(.ui-collapse__subtitle) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: 24px;
+  }
+
+  .ui-collapse:has(.ui-collapse__subtitle) .ui-collapse__head {
+    display: contents;
+  }
+
+  .ui-collapse:has(.ui-collapse__subtitle) .ui-collapse__toggle {
+    align-items: baseline;
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .ui-collapse:has(.ui-collapse__subtitle) .ui-collapse__chevron {
+    align-self: center;
+  }
+
+  .ui-collapse:has(.ui-collapse__subtitle) .ui-collapse__subtitle {
+    grid-column: 2;
+    grid-row: 1;
+    margin-top: 0;
+  }
+
+  .ui-collapse:has(.ui-collapse__subtitle) .ui-collapse__actions {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .ui-collapse:has(.ui-collapse__subtitle) .ui-collapse__body {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

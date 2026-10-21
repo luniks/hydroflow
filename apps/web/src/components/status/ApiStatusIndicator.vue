@@ -14,10 +14,12 @@ const dateFormat = {
   minute: '2-digit',
   second: '2-digit',
 };
-const { lastUpdate } = useDataLoader()
-const updateLabel = computed(() => 
-  lastUpdate.value ? `Dernière mise à jour : ${fmtDate(lastUpdate.value.toISOString(), dateFormat)}` : 'Récupération des données en cours',
-)
+const { lastUpdate, loading } = useDataLoader()
+
+const updateLabel = computed(() => {
+  if (!lastUpdate.value) return loading.value ? 'Récupération des données en cours' : 'Aucune donnée récupérée'
+  return `Dernière mise à jour : ${fmtDate(lastUpdate.value.toISOString(), dateFormat)}`
+})
 </script>
 
 <template>

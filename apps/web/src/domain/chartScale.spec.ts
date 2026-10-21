@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  nearestByTime,
   formatAxisTick,
   nearestPointIndex,
   rainBarOpacity,
@@ -228,5 +229,40 @@ describe('rainBarsGeometry', () => {
     })!
     expect(geo.width).toBe(200)
     expect(geo.plotBottom).toBe(36)
+  })
+})
+
+describe('nearestByTime', () => {
+  const at = (iso: string, y = 0) => ({ t: iso, y })
+  const A = at('2026-01-01T10:00:00Z', 1)
+  const B = at('2026-01-01T11:00:00Z', 2)
+  const C = at('2026-01-01T12:00:00Z', 3)
+  const ms = (iso: string) => Date.parse(iso)
+
+  it('retourne null pour une série vide', () => {
+    expect(nearestByTime([], ms('2026-01-01T10:00:00Z'))).toBeNull()
+  })
+
+  it('retourne l’unique point d’une série à un point, où que soit la cible', () => {
+    expect(nearestByTime([B], ms('2030-01-01T00:00:00Z'))).toBe(B)
+  })
+
+  it('retourne le point le plus proche de la cible', () => {
+    expect(nearestByTime([A, B, C], ms('2026-01-01T10:20:00Z'))).toBe(A)
+    expect(nearestByTime([A, B, C], ms('2026-01-01T10:40:00Z'))).toBe(B)
+    expect(nearestByTime([A, B, C], ms('2026-01-01T11:50:00Z'))).toBe(C)
+  })
+
+  it('retourne le point exact quand la cible coïncide', () => {
+    expect(nearestByTime([A, B, C], ms('2026-01-01T11:00:00Z'))).toBe(B)
+  })
+
+  it('borne aux extrémités quand la cible est hors de la série', () => {
+    expect(nearestByTime([A, B, C], ms('2025-12-31T00:00:00Z'))).toBe(A)
+    expect(nearestByTime([A, B, C], ms('2026-01-02T00:00:00Z'))).toBe(C)
+  })
+
+  it('garde le premier point en cas d’égalité', () => {
+    expect(nearestByTime([A, B], ms('2026-01-01T10:30:00Z'))).toBe(A)
   })
 })

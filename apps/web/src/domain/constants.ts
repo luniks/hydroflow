@@ -55,11 +55,22 @@ export const DEFAULT_STATIONS: Station[] = [
 
 export const EXPLOIT_DEFAULTS: ExploitConfig = {
   refCode: 'O469251003',
-  dmin: 5.5,
-  max: 23.5,
-  optMin: 10,
-  optMax: 19,
+  minFlow: 20,
+  startFlow: 30,
+  maxFlow: 150,
+  optMin: 45,
+  optMax: 135,
+  propagationMin: 30,
 }
+
+/** Horizon de la prevision d'exploitation (min) : au-dela, la tendance extrapolee n'est plus fiable. */
+export const OUTLOOK_HORIZON_MIN = 120
+
+/** Une mesure plus ancienne que cela (min) ne permet plus de prevoir quoi que ce soit. */
+export const OUTLOOK_STALE_MIN = 120
+
+/** Marge de « production a surveiller », en part de la plage [debit minimal ; debit maximum]. */
+export const OUTLOOK_WATCH_RATIO = 0.1
 
 export const DEFAULT_EXTERNAL_RAIN_DEFS: RainPointDef[] = [
   { key: 'castres', name: 'Castres', context: "Amont bassin · L'Agout", lat: 43.6047, lon: 2.2417 },

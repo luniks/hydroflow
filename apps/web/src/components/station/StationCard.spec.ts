@@ -80,13 +80,13 @@ describe('StationCard', () => {
     expect(wrapper.find('[role="alert"]').text()).toContain('Service indisponible')
   })
 
-  it('demande le rafraîchissement et le désactive pendant le chargement', async () => {
+  it('demande le rafraîchissement et le masque pendant le chargement', async () => {
     const wrapper = factory()
     await wrapper.find('[aria-label="Rafraîchir cette station"]').trigger('click')
     expect(wrapper.emitted('refresh')).toEqual([[station.code]])
 
     const busy = factory(makeState({ fetching: true }))
-    expect(busy.find('[aria-label="Rafraîchir cette station"]').attributes('disabled')).toBeDefined()
+    expect(busy.find('[aria-label="Rafraîchir cette station"]').exists()).toBe(false)
     expect(busy.find('[role="status"]').exists()).toBe(true)
   })
 

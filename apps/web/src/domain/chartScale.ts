@@ -4,6 +4,7 @@ export interface SparklineOptions {
   width?: number
   height?: number
   withXLabels?: boolean
+  withTitles?: boolean
   windowStart: Date
   windowEnd: Date
 }
@@ -36,6 +37,9 @@ export const SPARKLINE_PAD_LEFT = 44
 export const SPARKLINE_PAD_RIGHT = 8
 export const SPARKLINE_PLOT_TOP = 10
 export const SPARKLINE_TICK_COUNT = 5
+/** Espace réservé aux titres des axes (gauche pour Y, bas pour X). */
+export const Y_TITLE_SPACE = 18
+export const X_TITLE_SPACE = 16
 
 /** Formate un repère d'axe X : heure sous 30 h de plage, date au-delà. */
 export function formatAxisTick(ms: number, spanHours: number): string {
@@ -55,10 +59,11 @@ export function sparklineGeometry(
   const width = options.width ?? 600
   const withXLabels = options.withXLabels ?? true
   const height = options.height ?? (withXLabels ? 122 : 92)
-  const padLeft = SPARKLINE_PAD_LEFT
+  const padLeft = SPARKLINE_PAD_LEFT + (options.withTitles ? Y_TITLE_SPACE : 0)
   const padRight = SPARKLINE_PAD_RIGHT
   const plotTop = SPARKLINE_PLOT_TOP
-  const plotBottom = withXLabels ? height - 24 : height - 10
+  const plotBottom =
+    (withXLabels ? height - 24 : height - 10) - (options.withTitles ? X_TITLE_SPACE : 0)
 
   const values = points.map((p) => p.y)
   const min = Math.min(...values)
@@ -145,6 +150,8 @@ export interface RainBarsOptions {
   windowStartMs: number
   windowEndMs: number
   nowMs: number
+  withAxes?: boolean
+  withTitles?: boolean
 }
 
 export interface RainBar {
@@ -169,6 +176,8 @@ export interface RainBarsGeometry {
   slotWidth: number
   windowStartMs: number
   windowMs: number
+  xTicks: AxisTick[]
+  yTicks: AxisTick[]
 }
 
 export const RAIN_BARS_MIN_SCALE = 4
@@ -189,10 +198,11 @@ export function rainBarsGeometry(
 
   const width = options.width ?? 480
   const height = options.height ?? 88
-  const padLeft = 4
-  const padRight = 4
+  const withAxes = options.withAxes ?? false
+  const padLeft = withAxes ? SPARKLINE_PAD_LEFT + (options.withTitles ? Y_TITLE_SPACE : 0) : 4
+  const padRight = withAxes ? SPARKLINE_PAD_RIGHT : 4
   const plotTop = 8
-  const plotBottom = height - 4
+  const plotBottom = withAxes ? height - 24 - (options.withTitles ? X_TITLE_SPACE : 0) : height - 4
   const plotWidth = width - padLeft - padRight
 
   const { windowStartMs, windowEndMs, nowMs } = options
@@ -224,6 +234,23 @@ export function rainBarsGeometry(
 
   const inWindow = nowMs >= windowStartMs && nowMs <= windowEndMs
 
+  const spanHours = windowMs / 3_600_000
+  const xTicks = withAxes
+    ? Array.from({ length: SPARKLINE_TICK_COUNT }, (_, k) => {
+        const ratio = k / (SPARKLINE_TICK_COUNT - 1)
+        return {
+          position: padLeft + ratio * plotWidth,
+          label: formatAxisTick(windowStartMs + ratio * windowMs, spanHours),
+        }
+      })
+    : []
+  const yTicks = withAxes
+    ? [0, 0.5, 1].map((ratio) => ({
+        position: plotBottom - ratio * (plotBottom - plotTop),
+        label: `${Number((max * ratio).toFixed(1))}`,
+      }))
+    : []
+
   return {
     width,
     height,
@@ -237,6 +264,8 @@ export function rainBarsGeometry(
     slotWidth: barSlot,
     windowStartMs,
     windowMs,
+    xTicks,
+    yTicks,
   }
 }
 

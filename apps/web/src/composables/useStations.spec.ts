@@ -108,3 +108,87 @@ describe('makeStation', () => {
     expect(makeStation('X', 'Amont', {}).fallbackName).toBe('X')
   })
 })
+
+describe('useStations · chargements concurrents', () => {
+  const obs = (y: number) => ({
+    data: [{ date_obs: new Date().toISOString(), grandeur_hydro: 'Q', resultat_obs: y }],
+    next: null,
+  })
+  const wait = () => new Promise((r) => setTimeout(r, 20))
+  const station = () => api.stations.value[0]!
+
+  /** 1re requete lente (reponse `slow`), les suivantes immediates (reponse `fast`). */
+  function slowThenFast(slow: () => Response, fast: () => Response) {
+    let n = 0
+    let release!: () => void
+    const gate = new Promise<void>((r) => (release = r))
+    server.use(
+      http.get(`${config.hubeauUrl}/observations_tr`, async () => {
+        if (++n === 1) {
+          await gate
+          return slow()
+        }
+        return fast()
+      }),
+    )
+    return release
+  }
+
+  beforeEach(() => {
+    api.stateOf(station().code).name = 'x' // evite l'appel au referentiel
+  })
+
+  it('une réponse ancienne et lente n’écrase pas une réponse plus récente', async () => {
+    const release = slowThenFast(
+      () => HttpResponse.json(obs(1000)),
+      () => HttpResponse.json(obs(2000)),
+    )
+    const older = api.loadStation(station(), 24, 0)
+    await wait()
+    await api.loadStation(station(), 24, 0)
+    expect(api.stateOf(station().code).flowPoints.at(-1)?.y).toBe(2)
+
+    release()
+    await older
+    expect(api.stateOf(station().code).flowPoints.at(-1)?.y).toBe(2)
+  })
+
+  it('une erreur ancienne ne remplace pas un chargement plus récent réussi', async () => {
+    const release = slowThenFast(
+      () => new HttpResponse(null, { status: 503 }),
+      () => HttpResponse.json(obs(2000)),
+    )
+    const older = api.loadStation(station(), 24, 0)
+    await wait()
+    await api.loadStation(station(), 24, 0)
+    release()
+    await older
+    expect(api.stateOf(station().code).error).toBeNull()
+  })
+
+  it('l’indicateur de chargement reste actif tant que le dernier chargement n’est pas terminé', async () => {
+    let n = 0
+    let releaseOlder!: () => void
+    let releaseNewer!: () => void
+    const gateOlder = new Promise<void>((r) => (releaseOlder = r))
+    const gateNewer = new Promise<void>((r) => (releaseNewer = r))
+    server.use(
+      http.get(`${config.hubeauUrl}/observations_tr`, async () => {
+        const mine = ++n
+        await (mine === 1 ? gateOlder : gateNewer)
+        return HttpResponse.json(obs(mine))
+      }),
+    )
+    const older = api.loadStation(station(), 24, 0)
+    await wait()
+    const newer = api.loadStation(station(), 24, 0) // les deux sont en vol
+
+    releaseOlder()
+    await older // l'ancienne se termine pendant que la recente est encore en vol
+    expect(api.stateOf(station().code).fetching).toBe(true)
+
+    releaseNewer()
+    await newer
+    expect(api.stateOf(station().code).fetching).toBe(false)
+  })
+})

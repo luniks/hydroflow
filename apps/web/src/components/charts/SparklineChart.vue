@@ -5,6 +5,7 @@ import { fmtDate } from '@/domain/format'
 import type { SeriesPoint } from '@/domain/types'
 import { useChartCrosshair } from './useChartCrosshair'
 import ChartEmpty from './ChartEmpty.vue'
+import ChartExpand from './ChartExpand.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -16,6 +17,11 @@ const props = withDefaults(
     decimals?: number
     withXLabels?: boolean
     height?: number
+    width?: number
+    expandable?: boolean
+    title?: string
+    subtitle?: string
+    yTitle?: string
     companion?: { label: string; unit: string; points: SeriesPoint[]; decimals?: number } | null
     emptyLabel?: string
     ariaLabel?: string
@@ -26,18 +32,24 @@ const props = withDefaults(
     decimals: 2,
     withXLabels: true,
     companion: null,
+    expandable: true,
+    title: '',
+    subtitle: '',
     emptyLabel: 'Aucune mesure sur la période',
     ariaLabel: 'Évolution sur la période',
   },
 )
 
 const gradientId = useId()
+const titles = computed(() => !props.expandable && !!props.yTitle)
 
 const geometry = computed(() =>
   sparklineGeometry(props.points, {
     windowStart: props.windowStart,
     windowEnd: props.windowEnd,
     withXLabels: props.withXLabels,
+    withTitles: titles.value,
+    width: props.width,
     height: props.height,
   }),
 )
@@ -60,6 +72,7 @@ const companionValue = computed(() => {
   if (Math.abs(new Date(match.t).getTime() - targetMs) > 3_600_000) return null
   return `${companion.label} : ${match.y.toFixed(companion.decimals ?? 2)} ${companion.unit}`
 })
+
 </script>
 
 <template>
@@ -96,6 +109,23 @@ const companionValue = computed(() => {
         <text :x="geometry.padLeft - 6" :y="geometry.plotTop + 4" text-anchor="end" class="chart__axis">
           {{ format(geometry.max) }}
         </text>
+        <template v-if="!expandable && unit">
+          <line
+            :x1="geometry.padLeft"
+            :y1="(geometry.plotTop + geometry.plotBottom) / 2"
+            :x2="geometry.width - geometry.padRight"
+            :y2="(geometry.plotTop + geometry.plotBottom) / 2"
+            class="chart__grid"
+          />
+          <text
+            :x="geometry.padLeft - 6"
+            :y="(geometry.plotTop + geometry.plotBottom) / 2 + 4"
+            text-anchor="end"
+            class="chart__axis"
+          >
+            {{ format((geometry.max + geometry.min) / 2) }}
+          </text>
+        </template>
         <text
           :x="geometry.padLeft - 6"
           :y="geometry.plotBottom + 4"
@@ -103,6 +133,25 @@ const companionValue = computed(() => {
           class="chart__axis"
         >
           {{ format(geometry.min) }}
+        </text>
+
+        <text
+          v-if="titles"
+          :transform="`translate(11 ${(geometry.plotTop + geometry.plotBottom) / 2}) rotate(-90)`"
+          text-anchor="middle"
+          class="chart__axis chart__axis--title"
+        >
+          {{ yTitle }}
+        </text>
+
+        <text
+          v-if="titles"
+          :x="(geometry.padLeft + geometry.width - geometry.padRight) / 2"
+          :y="geometry.height - 4"
+          text-anchor="middle"
+          class="chart__axis chart__axis--title"
+        >
+          Date et heure
         </text>
 
         <g v-for="(tick, index) in geometry.xTicks" :key="tick.label + index">
@@ -116,7 +165,7 @@ const companionValue = computed(() => {
           <text
             v-if="withXLabels"
             :x="tick.position"
-            :y="geometry.height - 6"
+            :y="geometry.height - 6 - (titles ? 16 : 0)"
             :text-anchor="index === 0 ? 'start' : index === geometry.xTicks.length - 1 ? 'end' : 'middle'"
             class="chart__axis chart__axis--x"
           >
@@ -154,6 +203,25 @@ const companionValue = computed(() => {
         </g>
       </svg>
 
+      <ChartExpand v-if="expandable" :title="title || ariaLabel" :subtitle="title ? subtitle : undefined">
+        <template #default="{ width: w, height: h }">
+          <SparklineChart
+            :points="points"
+            :window-start="windowStart"
+            :window-end="windowEnd"
+            :color="color"
+            :unit="unit"
+            :decimals="decimals"
+            :width="w"
+            :height="h"
+            :y-title="yTitle || (unit ? `${ariaLabel} (${unit})` : undefined)"
+            :companion="companion"
+            :aria-label="ariaLabel"
+            :expandable="false"
+          />
+        </template>
+      </ChartExpand>
+
       <div
         v-if="state"
         class="chart__tooltip"
@@ -174,7 +242,7 @@ const companionValue = computed(() => {
   width: 100%;
 }
 
-.chart__wrap svg {
+.chart__wrap > svg {
   display: block;
   width: 100%;
   height: auto;
@@ -190,6 +258,11 @@ const companionValue = computed(() => {
 .chart__axis {
   fill: var(--muted);
   font-size: 11px;
+}
+
+.chart__axis--title {
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .chart__axis--x {

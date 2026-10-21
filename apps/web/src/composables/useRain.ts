@@ -103,14 +103,21 @@ function syncStates() {
 // immediatement, sinon les cartes se rendent sans donnees.
 watch(visiblePoints, syncStates, { immediate: true, flush: 'sync' })
 
+/** Dernier chargement lance par point : une reponse obsolete n'ecrase pas une donnee plus recente. */
+const latestLoad = new Map<string, number>()
+let loadSeq = 0
+
 async function load(points: RainPoint[] = visiblePoints.value) {
   if (!points.length) return
+  const token = ++loadSeq
+  for (const p of points) latestLoad.set(p.key, token)
+  const isLatest = (p: RainPoint) => latestLoad.get(p.key) === token
   for (const p of points) if (states[p.key]) states[p.key]!.fetching = true
   try {
     const series = await fetchRain(points)
     points.forEach((p, i) => {
       const st = states[p.key]
-      if (!st) return
+      if (!st || !isLatest(p)) return
       st.fetching = false
       const serie = series[i]
       if (serie) {
@@ -124,7 +131,7 @@ async function load(points: RainPoint[] = visiblePoints.value) {
   } catch (e) {
     for (const p of points) {
       const st = states[p.key]
-      if (!st) continue
+      if (!st || !isLatest(p)) continue
       st.fetching = false
       st.error = `Impossible de récupérer la pluviométrie (${errorMessage(e)}).`
     }

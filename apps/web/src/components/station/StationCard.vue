@@ -95,10 +95,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
       <div class="card__actions">
         <BaseSpinner v-if="state.fetching" />
         <BaseButton
+          v-if="!state.fetching"
           variant="icon"
           icon="refresh"
           aria-label="Rafraîchir cette station"
-          :disabled="state.fetching"
           @click="emit('refresh', station.code)"
         />
         <div ref="menuRoot" class="card__menu">
@@ -156,7 +156,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
       color="var(--flow)"
       unit="m³/s"
       :decimals="0"
+      :title="name"
+      :subtitle="`Évolution du débit · ${station.code} · ${label}`"
       aria-label="Évolution du débit"
+      y-title="Débit (m³/s)"
       :companion="state.points.length ? { label: 'Niveau', unit: 'm', points: state.points, decimals: 2 } : null"
     />
     <SparklineChart
@@ -166,7 +169,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
       :window-end="windowEnd"
       unit="m"
       :decimals="2"
+      :title="name"
+      :subtitle="`Évolution du niveau · ${station.code} · ${label}`"
       aria-label="Évolution du niveau"
+      y-title="Niveau (m)"
       :companion="null"
     />
 

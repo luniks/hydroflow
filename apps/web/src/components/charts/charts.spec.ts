@@ -33,7 +33,7 @@ describe('SparklineChart', () => {
 
   it('trace la courbe, l’aire et les bornes de l’axe Y', () => {
     const wrapper = mount(SparklineChart, { props: { points, windowStart, windowEnd } })
-    const paths = wrapper.findAll('path')
+    const paths = wrapper.findAll('svg[role="img"] path')
     expect(paths).toHaveLength(2)
     expect(paths[1]!.attributes('d')).toContain('M44.0,98.0')
     const texts = wrapper.findAll('text').map((t) => t.text())
@@ -156,6 +156,38 @@ describe('RainBarsChart', () => {
     expect(rects).toHaveLength(2)
     expect(rects[0]!.attributes('fill')).toBe('var(--rain)')
     expect(rects[1]!.attributes('fill')).toBe('var(--rain-far)')
+  })
+
+  it('survol souris : se cale sur l’heure la plus proche, marque « prévu » et se masque', async () => {
+    const wrapper = mount(RainBarsChart, {
+      props: { points: rain, windowStartMs, windowEndMs, nowMs },
+    })
+    stubSvgRect(wrapper, 480, 88)
+
+    // x = 360 px ≈ 3 h dans la fenêtre 0–4 h
+    await wrapper.find('svg').trigger('mousemove', { clientX: 360, clientY: 40 })
+    expect(wrapper.find('.rain-bars__hover-band').exists()).toBe(true)
+    expect(wrapper.find('.chart__tooltip').text()).toContain('10')
+    expect(wrapper.find('.chart__tooltip').text()).toContain('(prévu)')
+
+    await wrapper.find('svg').trigger('mousemove', { clientX: 0, clientY: 40 })
+    expect(wrapper.find('.chart__tooltip').text()).not.toContain('(prévu)')
+
+    await wrapper.find('svg').trigger('mouseleave')
+    expect(wrapper.find('.chart__tooltip').exists()).toBe(false)
+  })
+
+  it('survol tactile : affiche puis masque le tooltip', async () => {
+    const wrapper = mount(RainBarsChart, {
+      props: { points: rain, windowStartMs, windowEndMs, nowMs },
+    })
+    stubSvgRect(wrapper, 480, 88)
+
+    await wrapper.find('svg').trigger('touchstart', { touches: [{ clientX: 240, clientY: 40 }] })
+    expect(wrapper.find('.chart__tooltip').exists()).toBe(true)
+
+    await wrapper.find('svg').trigger('touchend')
+    expect(wrapper.find('.chart__tooltip').exists()).toBe(false)
   })
 
   it('trace le repère « maintenant » seulement dans la fenêtre', () => {

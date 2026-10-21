@@ -13,7 +13,7 @@ const emit = defineEmits<{ reset: [] }>()
 const { states } = useStations()
 
 /** BaseNumberInput modelise `number | null` : un champ vide devient NaN pour la validation. */
-function field(key: 'dmin' | 'max' | 'optMin' | 'optMax') {
+function field(key: 'minFlow' | 'startFlow' | 'maxFlow' | 'optMin' | 'optMax' | 'propagationMin') {
   return computed<number | null>({
     get: () => (Number.isFinite(props.draft.exploit[key]) ? props.draft.exploit[key] : null),
     set: (v) => {
@@ -22,10 +22,12 @@ function field(key: 'dmin' | 'max' | 'optMin' | 'optMax') {
   })
 }
 
-const dmin = field('dmin')
-const max = field('max')
+const minFlow = field('minFlow')
+const startFlow = field('startFlow')
+const maxFlow = field('maxFlow')
 const optMin = field('optMin')
 const optMax = field('optMax')
+const propagationMin = field('propagationMin')
 
 const refCode = computed<string>({
   get: () => props.draft.exploit.refCode,
@@ -57,12 +59,31 @@ const error = computed(() => validateExploit(props.draft.exploit))
 
     <div class="cfg-grid">
       <section class="cfg-block">
-        <h3 class="cfg-block__title">Débit de réserve</h3>
-        <BaseNumberInput v-model="dmin" unit="m³/s" :min="0" :step="0.5" />
+        <h3 class="cfg-block__title">Délai de propagation</h3>
+        <p class="cfg-block__hint">
+          Temps que met le débit de la station de référence pour arriver
+        </p>
+        <BaseNumberInput v-model="propagationMin" unit="min" :min="0" :step="1" />
+      </section>
+          <section class="cfg-block">
+        <h3 class="cfg-block__title">Débit de démarrage</h3>
+        <p class="cfg-block__hint">
+          Seuil à partir duquel la turbine peut démarrer
+        </p>
+        <BaseNumberInput v-model="startFlow" unit="m³/s" :min="0" :step="0.5" />
+      </section>
+    </div>
+
+    <div class="cfg-grid">
+      <section class="cfg-block">
+        <h3 class="cfg-block__title">Débit minimal</h3>
+        <p class="cfg-block__hint">En dessous, la turbine s’arrête</p>
+        <BaseNumberInput v-model="minFlow" unit="m³/s" :min="0" :step="0.5" />
       </section>
       <section class="cfg-block">
-        <h3 class="cfg-block__title">Capacité maximum</h3>
-        <BaseNumberInput v-model="max" unit="m³/s" :min="0" :step="0.5" />
+        <h3 class="cfg-block__title">Débit maximum</h3>
+        <p class="cfg-block__hint">Au-dessus, la turbine s’arrête</p>
+        <BaseNumberInput v-model="maxFlow" unit="m³/s" :min="0" :step="0.5" />
       </section>
     </div>
 
@@ -103,7 +124,7 @@ const error = computed(() => validateExploit(props.draft.exploit))
 }
 
 .cfg-block__hint {
-  margin: 8px 0 0;
+  margin: 8px 0px;
   color: var(--muted);
   font-size: 0.74rem;
 }

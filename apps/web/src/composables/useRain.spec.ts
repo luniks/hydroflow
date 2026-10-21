@@ -165,3 +165,57 @@ describe('slugifyPlaceKey', () => {
     expect(slugifyPlaceKey('Béziers (Hérault)')).toBe('beziers-herault')
   })
 })
+
+describe('useRain · chargements concurrents', () => {
+  const series = (mm: number) =>
+    Array.from({ length: rain.visiblePoints.value.length }, () => hourly(2, mm))
+  const wait = () => new Promise((r) => setTimeout(r, 20))
+
+  it('une réponse ancienne et lente n’écrase pas une réponse plus récente', async () => {
+    let n = 0
+    let release!: () => void
+    const gate = new Promise<void>((r) => (release = r))
+    server.use(
+      http.get(config.openMeteoForecastUrl, async () => {
+        if (++n === 1) {
+          await gate
+          return HttpResponse.json(series(1))
+        }
+        return HttpResponse.json(series(2))
+      }),
+    )
+    const key = rain.visiblePoints.value[0]!.key
+    const older = rain.load()
+    await wait()
+    await rain.load()
+    expect(rain.states[key]!.values).toEqual([2, 2])
+
+    release()
+    await older
+    expect(rain.states[key]!.values).toEqual([2, 2])
+    expect(rain.states[key]!.fetching).toBe(false)
+  })
+
+  it('une erreur ancienne n’écrase pas un chargement plus récent réussi', async () => {
+    let n = 0
+    let release!: () => void
+    const gate = new Promise<void>((r) => (release = r))
+    server.use(
+      http.get(config.openMeteoForecastUrl, async () => {
+        if (++n === 1) {
+          await gate
+          return new HttpResponse(null, { status: 503 })
+        }
+        return HttpResponse.json(series(2))
+      }),
+    )
+    const key = rain.visiblePoints.value[0]!.key
+    const older = rain.load()
+    await wait()
+    await rain.load()
+    release()
+    await older
+    expect(rain.states[key]!.error).toBeNull()
+    expect(rain.states[key]!.values).toEqual([2, 2])
+  })
+})

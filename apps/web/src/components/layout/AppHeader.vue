@@ -5,6 +5,7 @@ import ApiStatusIndicator from '../status/ApiStatusIndicator.vue'
 import { useAutoRefreshSetting } from '@/composables/useAutoRefresh'
 import { useTimeRange } from '@/composables/useTimeRange'
 import { useTheme } from '@/composables/useTheme'
+import { THEME_ICONS, THEME_LABELS } from '@/domain/theme'
 import BaseButton from '../ui/BaseButton.vue'
 import BaseDropdown from '../ui/BaseDropdown.vue'
 import type { SelectOption } from '../ui/types'
@@ -13,10 +14,8 @@ const props = defineProps<{ loading: boolean }>()
 const emit = defineEmits<{ refresh: []; openConfig: [] }>()
 
 const theme = useTheme()
-const themeIcon = computed(() => (theme.theme.value === 'dark' ? 'sun' : 'moon'))
-const themeLabel = computed(() =>
-  theme.theme.value === 'dark' ? 'Passer en thème clair' : 'Passer en thème sombre',
-)
+const themeIcon = computed(() => THEME_ICONS[theme.preference.value])
+const themeLabel = computed(() => THEME_LABELS[theme.preference.value])
 const { hours, isLive, window, ranges, setHours, prev, next, now } = useTimeRange()
 const auto = useAutoRefreshSetting()
 
@@ -25,7 +24,7 @@ const rangeOptions = computed<SelectOption<number>[]>(() =>
 )
 
 const autoOptions = computed<SelectOption<number>[]>(() =>
-  auto.options.map((m) => ({ value: m, label: m === 0 ? 'Désactivé' : `${m} min` })),
+  auto.options.map((m) => ({ value: m, label: m === 0 ? 'Désactivé' : `Toutes les ${m} min` })),
 )
 
 const selectedRange = computed({ get: () => hours.value, set: setHours })
@@ -92,7 +91,7 @@ const windowLabel = computed(() =>
 
         <div class="flex items-center gap-2 max-[640px]:w-full">
           <BaseButton
-            class="max-[640px]:flex-1"
+            class="app-header__refresh max-[640px]:flex-1"
             icon="refresh"
             aria-label="Rafraîchir"
             :loading="loading"
@@ -106,7 +105,13 @@ const windowLabel = computed(() =>
             :options="autoOptions"
             label="Auto :"
           />
-          <BaseButton variant="icon" :icon="themeIcon" :aria-label="themeLabel" @click="theme.toggle" />
+          <BaseButton
+            variant="icon"
+            :icon="themeIcon"
+            :aria-label="themeLabel"
+            :title="themeLabel"
+            @click="theme.toggle"
+          />
           <BaseButton variant="icon" icon="gear" aria-label="Configuration" @click="emit('openConfig')" />
         </div>
 
@@ -147,5 +152,18 @@ const windowLabel = computed(() =>
   color: var(--muted);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 540px) {
+  /* Icon-only square button: hide the label wrapper too so the gap doesn't off-center the icon */
+  .app-header__refresh.ui-btn {
+    flex: none;
+    width: 40px;
+    padding: 0;
+  }
+
+  .app-header__refresh :deep(.ui-btn__label) {
+    display: none;
+  }
 }
 </style>

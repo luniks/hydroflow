@@ -80,22 +80,51 @@ export function useDataLoader() {
     syncRainHealth()
   }
 
-  async function loadAll() {
-    if (loading.value) return
-    loading.value = true
-    syncStates()
-    try {
-      await Promise.all([
-        ...stations.value.map((s) => loadStation(s, hours.value, offsetSteps.value)),
-        loadRain(),
-        loadVigicrues(),
-      ])
+  /** Au moins une source a repondu (meme partiellement) : seul cas ou les donnees affichees ont ete rafraichies. */
+  function someSourceAnswered(): boolean {
+    return [api.health.hubeau, api.health.meteo, api.health.vigicrues].some(
+      (e) => e.state === 'ok' || e.state === 'warn',
+    )
+  }
 
-      syncHubeauHealth()
-      lastUpdate.value = new Date()
-    } finally {
-      loading.value = false
+  async function loadOnce() {
+    syncStates()
+    await Promise.all([
+      ...stations.value.map((s) => loadStation(s, hours.value, offsetSteps.value)),
+      loadRain(),
+      loadVigicrues(),
+    ])
+
+    syncHubeauHealth()
+    if (someSourceAnswered()) lastUpdate.value = new Date()
+  }
+
+  let running: Promise<void> | null = null
+  let rerunRequested = false
+
+  /**
+   * Recharge tout. Un appel arrive pendant un chargement n'est pas perdu : il demande UN rechargement
+   * supplementaire, execute ensuite avec la periode et la configuration du moment (plusieurs demandes
+   * se regroupent en une seule). La promesse retournee se resout une fois tout termine.
+   */
+  function loadAll(): Promise<void> {
+    if (running) {
+      rerunRequested = true
+      return running
     }
+    loading.value = true
+    running = (async () => {
+      try {
+        do {
+          rerunRequested = false
+          await loadOnce()
+        } while (rerunRequested)
+      } finally {
+        running = null
+        loading.value = false
+      }
+    })()
+    return running
   }
 
   return {

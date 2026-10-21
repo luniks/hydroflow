@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   fmtDate,
+  fmtDuration,
   fmtLevel,
   fmtMm,
   fmtQ,
@@ -66,5 +67,23 @@ describe('pluralize', () => {
     expect(pluralize(2, 'point')).toBe('points')
     expect(pluralize(0, 'point')).toBe('point')
     expect(pluralize(3, 'cheval', 'chevaux')).toBe('chevaux')
+  })
+})
+
+describe('fmtDuration', () => {
+  it('affiche les durées courtes en minutes', () => {
+    expect(fmtDuration(0)).toBe('0 min')
+    expect(fmtDuration(25)).toBe('25 min')
+  })
+
+  it('affiche les heures pleines et les heures avec minutes', () => {
+    expect(fmtDuration(120)).toBe('2 h')
+    expect(fmtDuration(80)).toBe('1 h 20')
+    expect(fmtDuration(125)).toBe('2 h 05')
+  })
+
+  it('arrondit à la minute et ignore les durées négatives', () => {
+    expect(fmtDuration(59.6)).toBe('1 h')
+    expect(fmtDuration(-3)).toBe('0 min')
   })
 })

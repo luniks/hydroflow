@@ -219,11 +219,36 @@ describe('ConfigModal', () => {
     it('affiche le message de validation et masque la jauge', async () => {
       const wrapper = factory()
       const draft = draftOf(wrapper)
-      draft.exploit.dmin = 50
+      draft.exploit.minFlow = 50
       await tab(wrapper, 'Seuils')
 
       expect(document.querySelector('.cfg-error')?.textContent).toBeTruthy()
       expect(document.querySelector('.gauge__bar')).toBeNull()
+    })
+
+    it('propose les nouveaux seuils et le délai de propagation', async () => {
+      const wrapper = factory()
+      await tab(wrapper, 'Seuils')
+      const titles = [...document.querySelectorAll('.cfg-block__title')].map((el) => el.textContent?.trim())
+      expect(titles).toEqual(
+        expect.arrayContaining([
+          'Délai de propagation',
+          'Débit minimal',
+          'Débit maximum',
+          'Débit de démarrage',
+          'Plage de rendement optimal',
+        ]),
+      )
+      expect(titles).not.toContain('Débit de réserve')
+      expect(titles).not.toContain('Capacité maximum')
+    })
+
+    it('refuse un débit de démarrage hors de la plage minimal–maximum', async () => {
+      const wrapper = factory()
+      const draft = draftOf(wrapper)
+      draft.exploit.startFlow = 999
+      await tab(wrapper, 'Seuils')
+      expect(document.querySelector('.cfg-error')?.textContent).toContain('débit de démarrage')
     })
 
     it('ne signale aucune erreur quand la configuration est valide', async () => {

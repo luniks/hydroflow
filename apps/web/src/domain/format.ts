@@ -29,3 +29,12 @@ export const levelRateToCmPerHour = (metresPerHour: number): number => metresPer
 export function pluralize(count: number, singular: string, plural = `${singular}s`): string {
   return count > 1 ? plural : singular
 }
+
+/** Duree en minutes -> « 25 min », « 1 h 20 », « 2 h ». */
+export function fmtDuration(minutes: number): string {
+  const m = Math.max(0, Math.round(minutes))
+  if (m < 60) return `${m} min`
+  const h = Math.floor(m / 60)
+  const rest = m % 60
+  return rest === 0 ? `${h} h` : `${h} h ${String(rest).padStart(2, '0')}`
+}

@@ -275,3 +275,18 @@ describe('BaseTooltip', () => {
     expect(wrapper.find('[role="tooltip"]').exists()).toBe(false)
   })
 })
+
+describe('BaseCollapse (zone de clic)', () => {
+  it('ne replie que depuis la ligne de titre, pas depuis le contenu', async () => {
+    const { default: BaseCollapse } = await import('./BaseCollapse.vue')
+    const wrapper = mount(BaseCollapse, {
+      props: { title: 'Stations', modelValue: false },
+      slots: { default: '<p class="inner">contenu</p>' },
+    })
+    await wrapper.find('.inner').trigger('click')
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+
+    await wrapper.find('.ui-collapse__toggle').trigger('click')
+    expect(wrapper.emitted('update:modelValue')).toEqual([[true]])
+  })
+})

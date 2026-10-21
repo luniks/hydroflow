@@ -4,6 +4,7 @@ import { rainBarsGeometry } from '@/domain/chartScale'
 import { fmtDate, fmtMm } from '@/domain/format'
 import type { SeriesPoint } from '@/domain/types'
 import ChartEmpty from './ChartEmpty.vue'
+import ChartExpand from './ChartExpand.vue'
 import { useRainHover } from './useRainHover'
 
 const props = withDefaults(
@@ -12,16 +13,29 @@ const props = withDefaults(
     windowStartMs: number
     windowEndMs: number
     nowMs: number
+    width?: number
+    height?: number
+    withAxes?: boolean
+    yTitle?: string
+    expandable?: boolean
+    title?: string
+    subtitle?: string
     emptyLabel?: string
   }>(),
-  { emptyLabel: 'Prévisions indisponibles pour ce point' },
+  { expandable: true, emptyLabel: 'Prévisions indisponibles pour ce point' },
 )
+
+const titles = computed(() => !props.expandable && !!props.yTitle)
 
 const geometry = computed(() =>
   rainBarsGeometry(props.points, {
     windowStartMs: props.windowStartMs,
     windowEndMs: props.windowEndMs,
     nowMs: props.nowMs,
+    withAxes: props.withAxes,
+    withTitles: titles.value,
+    width: props.width,
+    height: props.height,
   }),
 )
 
@@ -59,6 +73,47 @@ const { state, onMouseMove, onTouch, hide } = useRainHover(geometry, points)
           :y2="geometry.plotBottom"
           class="rain-bars__baseline"
         />
+        <g v-if="withAxes">
+          <g v-for="tick in geometry.yTicks" :key="`y${tick.position}`">
+            <line
+              :x1="geometry.padLeft"
+              :y1="tick.position"
+              :x2="geometry.width - geometry.padRight"
+              :y2="tick.position"
+              class="rain-bars__grid"
+            />
+            <text :x="geometry.padLeft - 6" :y="tick.position + 4" text-anchor="end" class="rain-bars__axis">
+              {{ tick.label }}
+            </text>
+          </g>
+          <text
+            v-if="titles"
+            :transform="`translate(11 ${(geometry.plotTop + geometry.plotBottom) / 2}) rotate(-90)`"
+            text-anchor="middle"
+            class="rain-bars__axis rain-bars__axis--title"
+          >
+            {{ yTitle }}
+          </text>
+          <text
+            v-if="titles"
+            :x="(geometry.padLeft + geometry.width - geometry.padRight) / 2"
+            :y="geometry.height - 4"
+            text-anchor="middle"
+            class="rain-bars__axis rain-bars__axis--title"
+          >
+            Date et heure
+          </text>
+          <text
+            v-for="(tick, index) in geometry.xTicks"
+            :key="`x${index}`"
+            :x="tick.position"
+            :y="geometry.height - 6 - (titles ? 16 : 0)"
+            :text-anchor="index === 0 ? 'start' : index === geometry.xTicks.length - 1 ? 'end' : 'middle'"
+            class="rain-bars__axis"
+          >
+            {{ tick.label }}
+          </text>
+        </g>
         <rect
           v-for="(bar, index) in geometry.bars"
           :key="index"
@@ -79,6 +134,25 @@ const { state, onMouseMove, onTouch, hide } = useRainHover(geometry, points)
           class="rain-bars__now"
         />
       </svg>
+
+      <ChartExpand
+        v-if="expandable"
+        :title="title || 'Cumuls de pluie horaires'"
+        :subtitle="title ? subtitle : undefined" :height-ratio="0.3" :min-height="200">
+        <template #default="{ width: w, height: h }">
+          <RainBarsChart
+            :points="points"
+            :window-start-ms="windowStartMs"
+            :window-end-ms="windowEndMs"
+            :now-ms="nowMs"
+            :width="w"
+            :height="h"
+            with-axes
+            y-title="Cumul de pluie (mm)"
+            :expandable="false"
+          />
+        </template>
+      </ChartExpand>
 
       <div
         v-if="state"
@@ -101,7 +175,7 @@ const { state, onMouseMove, onTouch, hide } = useRainHover(geometry, points)
   width: 100%;
 }
 
-.chart__wrap svg {
+.chart__wrap > svg {
   display: block;
   width: 100%;
   height: auto;
@@ -111,6 +185,22 @@ const { state, onMouseMove, onTouch, hide } = useRainHover(geometry, points)
 .rain-bars__hover-band {
   fill: var(--muted);
   opacity: 0.18;
+}
+
+.rain-bars__grid {
+  stroke: var(--card-border);
+  stroke-width: 1;
+  stroke-dasharray: 2, 3;
+}
+
+.rain-bars__axis {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.rain-bars__axis--title {
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .rain-bars__baseline {
