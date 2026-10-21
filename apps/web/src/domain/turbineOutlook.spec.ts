@@ -272,9 +272,9 @@ describe('turbineOutlook · valeurs par défaut du site', () => {
   })
 
   it('annonce un démarrage quand le débit atteint 30 m³/s', () => {
-    // 22 → 40 m³/s en 30 min : le seuil de démarrage (30) est franchi à 13,3 min, soit à la 14e minute.
+    // 22 → 40 m³/s en 80 min : le seuil de démarrage (80), est franchi à 1 h 04.
     const o = turbineOutlook(pts([30, 22], [0, 40]), EXPLOIT_DEFAULTS, NOW)
     expect(o).toMatchObject({ kind: 'start-expected', source: 'observed', turbine: 'stop' })
-    expect(o.headline).toBe('Démarrage prévu dans 14 min')
+    expect(o.headline).toBe('Démarrage prévu dans 1 h 04')
   })
 })

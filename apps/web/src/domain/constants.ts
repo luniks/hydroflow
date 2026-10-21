@@ -60,7 +60,7 @@ export const EXPLOIT_DEFAULTS: ExploitConfig = {
   maxFlow: 150,
   optMin: 45,
   optMax: 135,
-  propagationMin: 30,
+  propagationMin: 80,
 }
 
 /** Horizon de la prevision d'exploitation (min) : au-dela, la tendance extrapolee n'est plus fiable. */
