@@ -1,28 +1,45 @@
-import { watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { STORAGE_KEYS } from '@/domain/constants'
-import type { ThemeName } from '@/domain/types'
+import { isThemePreference, nextThemePreference, resolveTheme } from '@/domain/theme'
+import type { ThemePreference } from '@/domain/types'
 import { useLocalStorage } from './useLocalStorage'
 
-const theme = useLocalStorage<ThemeName>(STORAGE_KEYS.theme, 'dark', {
+/**
+ * Un theme enregistre (« light » / « dark », choisi avec le bouton) reste impose ; sans reglage,
+ * le theme suit celui du systeme, y compris quand celui-ci change pendant que l'app est ouverte.
+ */
+const preference = useLocalStorage<ThemePreference>(STORAGE_KEYS.theme, 'system', {
   serialize: (v) => v,
   deserialize: (raw) => raw,
-  parse: (raw) => (raw === 'light' || raw === 'dark' ? raw : null),
+  parse: (raw) => (isThemePreference(raw) ? raw : null),
 })
 
-function apply(value: ThemeName) {
-  document.documentElement.setAttribute('data-theme', value)
-}
+// Sans matchMedia (navigateur tres ancien), on retombe sur le sombre, ancien theme par defaut.
+const systemQuery =
+  typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null
+const systemDark = ref(systemQuery?.matches ?? true)
+systemQuery?.addEventListener('change', (e) => {
+  systemDark.value = e.matches
+})
 
-watch(theme, apply, { immediate: true, flush: 'sync' })
+/** Theme effectivement affiche (jamais « system »). */
+const theme = computed(() => resolveTheme(preference.value, systemDark.value))
+
+watch(
+  theme,
+  (value) => document.documentElement.setAttribute('data-theme', value),
+  { immediate: true, flush: 'sync' },
+)
 
 export function useTheme() {
   return {
     theme,
+    preference,
     toggle: () => {
-      theme.value = theme.value === 'dark' ? 'light' : 'dark'
+      preference.value = nextThemePreference(preference.value)
     },
-    set: (value: ThemeName) => {
-      theme.value = value
+    set: (value: ThemePreference) => {
+      preference.value = value
     },
   }
 }

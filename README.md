@@ -6,7 +6,7 @@ Tableau de bord de suivi de stations hydrométriques (Hub'Eau) pour l'exploitati
 
 - Vue 3 (`<script setup>`, TypeScript strict)
 - Vite
-- Tailwind CSS v4 (tokens CSS, thèmes sombre/clair)
+- Tailwind CSS v4 (tokens CSS, thèmes sombre/clair ; suit le thème du système, ou thème imposé via le bouton de l'en-tête : auto → clair → sombre)
 - Vitest + MSW + Vue Test Utils
 - Proxy Node sans dépendance pour Vigicrues
 

@@ -5,6 +5,7 @@ import ApiStatusIndicator from '../status/ApiStatusIndicator.vue'
 import { useAutoRefreshSetting } from '@/composables/useAutoRefresh'
 import { useTimeRange } from '@/composables/useTimeRange'
 import { useTheme } from '@/composables/useTheme'
+import { THEME_ICONS, THEME_LABELS } from '@/domain/theme'
 import BaseButton from '../ui/BaseButton.vue'
 import BaseDropdown from '../ui/BaseDropdown.vue'
 import type { SelectOption } from '../ui/types'
@@ -13,10 +14,8 @@ const props = defineProps<{ loading: boolean }>()
 const emit = defineEmits<{ refresh: []; openConfig: [] }>()
 
 const theme = useTheme()
-const themeIcon = computed(() => (theme.theme.value === 'dark' ? 'sun' : 'moon'))
-const themeLabel = computed(() =>
-  theme.theme.value === 'dark' ? 'Passer en thème clair' : 'Passer en thème sombre',
-)
+const themeIcon = computed(() => THEME_ICONS[theme.preference.value])
+const themeLabel = computed(() => THEME_LABELS[theme.preference.value])
 const { hours, isLive, window, ranges, setHours, prev, next, now } = useTimeRange()
 const auto = useAutoRefreshSetting()
 
@@ -106,7 +105,13 @@ const windowLabel = computed(() =>
             :options="autoOptions"
             label="Auto :"
           />
-          <BaseButton variant="icon" :icon="themeIcon" :aria-label="themeLabel" @click="theme.toggle" />
+          <BaseButton
+            variant="icon"
+            :icon="themeIcon"
+            :aria-label="themeLabel"
+            :title="themeLabel"
+            @click="theme.toggle"
+          />
           <BaseButton variant="icon" icon="gear" aria-label="Configuration" @click="emit('openConfig')" />
         </div>
 

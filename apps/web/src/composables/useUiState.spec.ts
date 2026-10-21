@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick } from 'vue'
 import { partialState, useApiHealth } from './useApiHealth'
 import { useAutoRefresh } from './useAutoRefresh'
+import { installMatchMedia, setSystemTheme } from '@/test/matchMedia'
 import { useTheme } from './useTheme'
 import { useTimeRange } from './useTimeRange'
 
@@ -146,21 +147,95 @@ describe('useAutoRefresh', () => {
 
 describe('useTheme', () => {
   const theme = useTheme()
+  const attr = () => document.documentElement.getAttribute('data-theme')
 
-  it('bascule entre sombre et clair', () => {
-    theme.set('dark')
-    theme.toggle()
-    expect(theme.theme.value).toBe('light')
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light')
-    theme.toggle()
+  beforeEach(() => theme.set('system'))
+
+  it('suit le thème du système par défaut', () => {
+    expect(theme.preference.value).toBe('system')
     expect(theme.theme.value).toBe('dark')
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
   })
 
-  it('persiste le thème en clair sous la clé legacy', async () => {
+  it('réagit en direct aux changements du système', () => {
+    setSystemTheme('light')
+    expect(theme.theme.value).toBe('light')
+    expect(attr()).toBe('light')
+    setSystemTheme('dark')
+    expect(attr()).toBe('dark')
+  })
+
+  it('ignore le système quand un thème est imposé', () => {
+    theme.set('light')
+    setSystemTheme('dark')
+    expect(theme.theme.value).toBe('light')
+    expect(attr()).toBe('light')
+  })
+
+  it('reprend le thème du système en repassant en automatique', () => {
+    theme.set('dark')
+    setSystemTheme('light')
+    expect(attr()).toBe('dark')
+    theme.set('system')
+    expect(attr()).toBe('light')
+  })
+
+  it('enchaîne automatique → clair → sombre → automatique', () => {
+    theme.toggle()
+    expect(theme.preference.value).toBe('light')
+    expect(attr()).toBe('light')
+    theme.toggle()
+    expect(theme.preference.value).toBe('dark')
+    expect(attr()).toBe('dark')
+    theme.toggle()
+    expect(theme.preference.value).toBe('system')
+  })
+
+  it('persiste le réglage sous la clé legacy', async () => {
     theme.set('light')
     await nextTick()
     expect(localStorage.getItem('ui_theme')).toBe('light')
-    theme.set('dark')
+    theme.set('system')
+    await nextTick()
+    expect(localStorage.getItem('ui_theme')).toBe('system')
+  })
+})
+
+describe('useTheme · démarrage', () => {
+  afterEach(() => {
+    vi.resetModules()
+    installMatchMedia()
+  })
+
+  const fresh = async () => (await import('./useTheme')).useTheme()
+
+  it('conserve le thème imposé par un utilisateur existant', async () => {
+    localStorage.setItem('ui_theme', 'light')
+    vi.resetModules()
+    const t = await fresh()
+    expect(t.preference.value).toBe('light')
+    expect(t.theme.value).toBe('light')
+  })
+
+  it('retombe sur l’automatique quand la valeur enregistrée est invalide', async () => {
+    localStorage.setItem('ui_theme', 'auto')
+    vi.resetModules()
+    const t = await fresh()
+    expect(t.preference.value).toBe('system')
+  })
+
+  it('démarre sur le thème clair du système', async () => {
+    setSystemTheme('light')
+    vi.resetModules()
+    const t = await fresh()
+    expect(t.theme.value).toBe('light')
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light')
+  })
+
+  it('retombe sur le sombre quand le navigateur ne sait pas lire le thème du système', async () => {
+    // @ts-expect-error simulation d'un navigateur sans matchMedia
+    delete window.matchMedia
+    vi.resetModules()
+    const t = await fresh()
+    expect(t.theme.value).toBe('dark')
   })
 })

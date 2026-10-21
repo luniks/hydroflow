@@ -157,4 +157,7 @@ export interface TimeWindow {
 
 export type ThemeName = 'dark' | 'light'
 
+/** Reglage de l'utilisateur : un theme impose, ou `system` pour suivre celui du systeme. */
+export type ThemePreference = 'system' | ThemeName
+
 export type ApiHealth = 'ok' | 'warn' | 'err'
