@@ -95,10 +95,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
       <div class="card__actions">
         <BaseSpinner v-if="state.fetching" />
         <BaseButton
+          v-if="!state.fetching"
           variant="icon"
           icon="refresh"
           aria-label="Rafraîchir cette station"
-          :disabled="state.fetching"
           @click="emit('refresh', station.code)"
         />
         <div ref="menuRoot" class="card__menu">

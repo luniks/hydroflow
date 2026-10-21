@@ -15,6 +15,13 @@ const stations = useLocalStorage<Station[]>(
 
 const states = reactive<Record<string, StationState>>({})
 
+/**
+ * Dernier chargement lance par station. Une reponse n'est appliquee que si elle correspond encore
+ * au dernier chargement : sinon une requete lente et ancienne ecraserait une donnee plus recente.
+ */
+const latestLoad = new Map<string, number>()
+let loadSeq = 0
+
 function emptyState(): StationState {
   return { points: [], flowPoints: [], name: null, river: null, error: null, fetching: false }
 }
@@ -55,6 +62,9 @@ export function useStations() {
 
   async function loadStation(station: Station, hours: number, offsetSteps: number) {
     const state = ensureState(station.code)
+    const token = ++loadSeq
+    latestLoad.set(station.code, token)
+    const isLatest = () => latestLoad.get(station.code) === token
     state.fetching = true
     try {
       if (!state.name) {
@@ -69,13 +79,15 @@ export function useStations() {
         }
       }
       const { heightPoints, flowPoints } = await fetchObservations(station.code, hours, offsetSteps)
+      if (!isLatest()) return
       state.points = downsample(heightPoints, MAX_CHART_POINTS)
       state.flowPoints = downsample(flowPoints, MAX_CHART_POINTS)
       state.error = null
     } catch (e) {
-      state.error = errorMessage(e)
+      if (isLatest()) state.error = errorMessage(e)
     } finally {
-      state.fetching = false
+      // Le chargement le plus recent a la main sur l'indicateur : une reponse obsolete ne doit pas l'eteindre.
+      if (isLatest()) state.fetching = false
     }
   }
 

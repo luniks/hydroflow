@@ -18,8 +18,9 @@ export function downsample(points: SeriesPoint[], maxPoints = MAX_CHART_POINTS):
   const step = points.length / maxPoints
   const out: SeriesPoint[] = []
   for (let i = 0; i < maxPoints; i++) out.push(points[Math.floor(i * step)]!)
-  const last = points[points.length - 1]!
-  if (out[out.length - 1] !== last) out.push(last)
+  // Le pas est > 1 : le dernier indice echantillonne est toujours < n - 1, donc la mesure
+  // la plus recente n'y figure jamais et doit etre ajoutee.
+  out.push(points[points.length - 1]!)
   return out
 }
 

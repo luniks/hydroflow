@@ -1,9 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import VigicruesBanner from './VigicruesBanner.vue'
 import ApiStatusIndicator from './ApiStatusIndicator.vue'
 import { VIGICRUES_LEVELS } from '@/api/vigicrues'
 import { useApiHealth } from '@/composables/useApiHealth'
+import { useDataLoader } from '@/composables/useDataLoader'
+import { useStations } from '@/composables/useStations'
+import { useTimeRange } from '@/composables/useTimeRange'
 
 describe('VigicruesBanner', () => {
   const info = {
@@ -57,5 +60,38 @@ describe('ApiStatusIndicator', () => {
     expect(items).toHaveLength(3)
     expect(items[2]!.text()).toContain('Proxy injoignable.')
     expect(items[2]!.find('.api-dot').classes()).toContain('api-dot--err')
+  })
+
+  describe('libellé de mise à jour', () => {
+    const loader = useDataLoader()
+    const stations = useStations()
+    const range = useTimeRange()
+    const label = () => mount(ApiStatusIndicator).find('.app-header__update').text()
+
+    beforeEach(() => {
+      stations.reset()
+      loader.lastUpdate.value = null
+      range.offsetSteps.value = 0
+    })
+
+    it('annonce l’absence de données quand rien n’a pu être chargé', () => {
+      expect(label()).toBe('Aucune donnée récupérée')
+    })
+
+    it('annonce la récupération en cours pendant le tout premier chargement', async () => {
+      loader.loading.value = true
+      expect(label()).toBe('Récupération des données en cours')
+      loader.loading.value = false
+    })
+
+    it('donne l’heure de mise à jour', () => {
+      const updated = new Date('2026-01-01T12:00:00Z')
+      loader.lastUpdate.value = updated
+      const at = (agoMin: number) => ({ t: new Date(updated.getTime() - agoMin * 60_000).toISOString(), y: 1 })
+      stations.stateOf('O469251003').flowPoints = [at(10)]
+      stations.stateOf('O480252002').points = [at(185)]
+
+      expect(label()).toContain('Dernière mise à jour')
+    })
   })
 })

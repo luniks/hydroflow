@@ -99,6 +99,13 @@ mesure de l'historique permet de démarrer, « à l'arrêt » sinon : avec une p
 Les constantes (`OUTLOOK_HORIZON_MIN`, `OUTLOOK_STALE_MIN`, `OUTLOOK_WATCH_RATIO`) sont dans `apps/web/src/domain/constants.ts`.
 Une configuration enregistrée avec l'ancien format (débit de réserve / capacité maximum) est migrée automatiquement.
 
+## Rafraîchissement des données
+
+- **Manuel** (bouton), **automatique** (intervalle réglable, 0 = désactivé) et **au retour sur l'onglet** ou quand le réseau revient, si les données sont plus vieilles que l'intervalle (les minuteurs sont suspendus en arrière-plan et en veille).
+- Une demande de chargement faite **pendant** un chargement (changement de période, fermeture de la configuration…) n'est pas perdue : elle déclenche un seul rechargement une fois le courant terminé, avec la période du moment. Les ticks du minuteur, eux, sont ignorés pendant un chargement.
+- Chaque station et chaque point de pluie n'applique que la réponse du **dernier** chargement lancé : une réponse lente et ancienne ne remplace jamais une donnée plus récente.
+- « Dernière mise à jour » n'avance que si au moins une source (Hub'Eau, Open-Meteo, Vigicrues) a répondu ; l'en-tête indique aussi l'âge de la mesure la plus ancienne (vue en direct uniquement). En cas d'échec, les anciennes données restent affichées avec un bandeau d'erreur sur la carte concernée.
+
 ## Sources de données
 
 [Hub'Eau Hydrométrie](https://hubeau.eaufrance.fr/) · [Open-Meteo](https://open-meteo.com/) ·

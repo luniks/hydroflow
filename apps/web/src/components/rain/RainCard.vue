@@ -66,10 +66,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
         </BaseBadge>
         <BaseSpinner v-if="state.fetching" />
         <BaseButton
+          v-if="!state.fetching"
           variant="icon"
           icon="refresh"
           aria-label="Rafraîchir ce point"
-          :disabled="state.fetching"
           @click="emit('refresh', point)"
         />
         <div ref="menuRoot" class="rain-card__menu">

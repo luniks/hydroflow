@@ -8,14 +8,13 @@ const id = useId()
 </script>
 
 <template>
-  <div class="ui-collapse" :class="{ 'is-collapsed': collapsed }">
+  <div class="ui-collapse" :class="{ 'is-collapsed': collapsed }" @click="collapsed = !collapsed">
     <div class="ui-collapse__head">
       <button
         type="button"
         class="ui-collapse__toggle"
         :aria-expanded="!collapsed"
         :aria-controls="id"
-        @click="collapsed = !collapsed"
       >
         <BaseIcon name="chevDown" class="ui-collapse__chevron" />
         <span>{{ title }}</span>
@@ -28,6 +27,10 @@ const id = useId()
 </template>
 
 <style scoped>
+.ui-collapse {
+  cursor: pointer;
+  padding: var(--space-card);
+}
 .ui-collapse__head {
   display: flex;
   align-items: center;

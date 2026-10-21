@@ -41,6 +41,22 @@ describe('computeWindow', () => {
   })
 })
 
+describe('downsample · mesure la plus récente', () => {
+  it('conserve toujours le dernier point, quelle que soit la taille', () => {
+    for (const [n, max] of [[101, 100], [1000, 100], [801, 800], [5000, 800], [3, 2], [2, 1]] as const) {
+      const points = series(n)
+      const out = downsample(points, max)
+      expect(out.at(-1)).toBe(points.at(-1))
+      expect(out[0]).toBe(points[0])
+    }
+  })
+
+  it('n’ajoute le dernier point qu’une seule fois', () => {
+    const out = downsample(series(1000), 100)
+    expect(new Set(out).size).toBe(out.length)
+  })
+})
+
 describe('downsample', () => {
   it('retourne la série inchangée sous la limite', () => {
     const points = series(10)

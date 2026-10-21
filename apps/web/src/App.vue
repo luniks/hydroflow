@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onScopeDispose, ref, watch } from 'vue'
 import { useAutoRefresh } from '@/composables/useAutoRefresh'
+import { useRefreshOnReturn } from '@/composables/useRefreshOnReturn'
 import { useDataLoader } from '@/composables/useDataLoader'
 import { useTheme } from '@/composables/useTheme'
 import { useTimeRange } from '@/composables/useTimeRange'
@@ -16,7 +17,11 @@ useTheme()
 const { hours, offsetSteps } = useTimeRange()
 const { loading, vigicrues, loadAll, refreshStation, refreshRainPoint } = useDataLoader()
 
-useAutoRefresh(loadAll)
+// Un tick du minuteur pendant un chargement est inutile : celui-ci rafraichit deja les donnees.
+useAutoRefresh(() => {
+  if (!loading.value) void loadAll()
+})
+useRefreshOnReturn()
 
 /** Horloge partagee par les graphiques de pluie (barres passees/futures). */
 const nowMs = ref(Date.now())

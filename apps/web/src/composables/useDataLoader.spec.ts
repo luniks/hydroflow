@@ -5,6 +5,7 @@ import { config } from '@/config/env'
 import { server } from '@/test/msw/server'
 import { useApiHealth } from './useApiHealth'
 import { useDataLoader } from './useDataLoader'
+import { useTimeRange } from './useTimeRange'
 import { useRain } from './useRain'
 import { useStations } from './useStations'
 
@@ -87,15 +88,102 @@ describe('useDataLoader', () => {
     expect(api.health.meteo.state).toBe('err')
   })
 
-  it('ignore un second chargement concurrent', async () => {
-    let calls = 0
-    server.use(
-      http.get(`${config.hubeauUrl}/observations_tr`, () => {
-        calls++
-        return HttpResponse.json(observation())
-      }),
-    )
-    await Promise.all([loader.loadAll(), loader.loadAll()])
-    expect(calls).toBe(3)
+  describe('appels pendant un chargement', () => {
+    /** Intercepte Hub'Eau : enregistre l'age de la fenetre demandee et attend `gate` avant de repondre. */
+    function holdObservations() {
+      const windows: number[] = []
+      let release!: () => void
+      const gate = new Promise<void>((r) => (release = r))
+      server.use(
+        http.get(`${config.hubeauUrl}/observations_tr`, async ({ request }) => {
+          const from = new URL(request.url).searchParams.get('date_debut_obs')!
+          windows.push(Math.round((Date.now() - Date.parse(from)) / 3_600_000))
+          await gate
+          return HttpResponse.json(observation())
+        }),
+      )
+      return { windows, release }
+    }
+    const tick = () => new Promise((r) => setTimeout(r, 20))
+
+    it('ne perd pas un changement de période demandé pendant un chargement', async () => {
+      const range = useTimeRange()
+      range.hours.value = 24
+      const { windows, release } = holdObservations()
+
+      const first = loader.loadAll()
+      await tick()
+      range.hours.value = 72 // le watch de App.vue relance un chargement
+      const second = loader.loadAll()
+      release()
+      await Promise.all([first, second])
+
+      expect(windows.filter((w) => w >= 70).length).toBeGreaterThan(0)
+      range.hours.value = 24
+    })
+
+    it('regroupe plusieurs appels en un seul rechargement', async () => {
+      const { windows, release } = holdObservations()
+      const first = loader.loadAll()
+      await tick()
+      const rest = [loader.loadAll(), loader.loadAll(), loader.loadAll()]
+      release()
+      await Promise.all([first, ...rest])
+      // 3 stations x (chargement initial + 1 seul rechargement)
+      expect(windows).toHaveLength(stations.stations.value.length * 2)
+    })
+
+    it('reste en chargement tant que le rechargement n’est pas terminé', async () => {
+      const { windows, release } = holdObservations()
+      const first = loader.loadAll()
+      await tick()
+      const second = loader.loadAll()
+      expect(loader.loading.value).toBe(true)
+
+      release()
+      await Promise.all([first, second]) // les deux appels se resolvent une fois tout termine
+      expect(loader.loading.value).toBe(false)
+      expect(windows).toHaveLength(stations.stations.value.length * 2)
+    })
+
+    it('un chargement isolé ne se répète pas', async () => {
+      const { windows, release } = holdObservations()
+      release()
+      await loader.loadAll()
+      expect(windows).toHaveLength(stations.stations.value.length)
+    })
+  })
+
+  describe('dernière mise à jour', () => {
+    const failAll = () =>
+      server.use(
+        http.get(`${config.hubeauUrl}/observations_tr`, () => new HttpResponse(null, { status: 503 })),
+        http.get(config.openMeteoForecastUrl, () => new HttpResponse(null, { status: 503 })),
+        http.get(config.vigicruesProxyUrl, () => new HttpResponse(null, { status: 503 })),
+      )
+
+    it('n’avance pas quand aucune source ne répond', async () => {
+      await loader.loadAll()
+      const before = loader.lastUpdate.value!.getTime()
+      await new Promise((r) => setTimeout(r, 15))
+
+      failAll()
+      await loader.loadAll()
+      expect(api.overall.value).toBe('err')
+      expect(loader.lastUpdate.value!.getTime()).toBe(before)
+    })
+
+    it('avance dès qu’une source répond, même si les autres échouent', async () => {
+      await loader.loadAll()
+      const before = loader.lastUpdate.value!.getTime()
+      await new Promise((r) => setTimeout(r, 15))
+
+      failAll()
+      server.use(http.get(`${config.hubeauUrl}/observations_tr`, () => HttpResponse.json(observation())))
+      await loader.loadAll()
+      expect(api.health.hubeau.state).toBe('ok')
+      expect(api.health.meteo.state).toBe('err')
+      expect(loader.lastUpdate.value!.getTime()).toBeGreaterThan(before)
+    })
   })
 })
