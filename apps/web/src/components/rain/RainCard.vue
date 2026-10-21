@@ -114,6 +114,8 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
       :window-start-ms="window.startMs"
       :window-end-ms="window.endMs"
       :now-ms="nowMs"
+      :title="point.name"
+      :subtitle="['Cumuls de pluie horaires', point.context].filter(Boolean).join(' · ')"
     />
 
     <p class="rain-card__total">Cumul total estimé : {{ fmtMm(totals.total) }} mm</p>

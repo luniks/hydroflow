@@ -5,10 +5,17 @@ import BaseIcon from './BaseIcon.vue'
 defineProps<{ title: string }>()
 const collapsed = defineModel<boolean>({ required: true })
 const id = useId()
+
+// Seule la ligne de titre (titre, sous-titre, actions) replie la section, pas son contenu.
+function onClick(event: MouseEvent) {
+  if ((event.target as HTMLElement).closest('.ui-collapse__head, .ui-collapse__subtitle')) {
+    collapsed.value = !collapsed.value
+  }
+}
 </script>
 
 <template>
-  <div class="ui-collapse" :class="{ 'is-collapsed': collapsed }" @click="collapsed = !collapsed">
+  <div class="ui-collapse" :class="{ 'is-collapsed': collapsed }" @click="onClick">
     <div class="ui-collapse__head">
       <button
         type="button"
@@ -28,8 +35,12 @@ const id = useId()
 
 <style scoped>
 .ui-collapse {
-  cursor: pointer;
   padding: var(--space-card);
+}
+
+.ui-collapse__head,
+.ui-collapse__subtitle {
+  cursor: pointer;
 }
 .ui-collapse__head {
   display: flex;

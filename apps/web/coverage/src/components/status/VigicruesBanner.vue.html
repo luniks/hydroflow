@@ -25,28 +25,28 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>20/20</span>
+                <span class='fraction'>12/12</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>13/13</span>
+                <span class='fraction'>18/18</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>3/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>20/20</span>
+                <span class='fraction'>8/8</span>
             </div>
         
             
@@ -153,33 +153,47 @@
 <a name='L88'></a><a href='#L88'>88</a>
 <a name='L89'></a><a href='#L89'>89</a>
 <a name='L90'></a><a href='#L90'>90</a>
-<a name='L91'></a><a href='#L91'>91</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">24x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">31x</span>
+<span class="cline-any cline-yes">26x</span>
+<span class="cline-any cline-yes">31x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">31x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -256,19 +270,26 @@ const url = computed(() =&gt; bassinUrl(props.info?.parentCode ?? VIGICRUES_TERR
 &lt;/script&gt;
 &nbsp;
 &lt;template&gt;
-  &lt;div class="vigicrues-banner" :class="`vigicrues-banner--${tone}`"&gt;
-    &lt;span class="vigicrues-banner__dot" /&gt;
-    &lt;span class="vigicrues-banner__text"&gt;
-      &lt;template v-if="info &amp;&amp; level"&gt;
-        &lt;strong&gt;{{ level.label }}&lt;/strong&gt; — tronçon {{ info.name }}
-        &lt;em v-if="info.stale" class="vigicrues-banner__stale"&gt;(données en cache)&lt;/em&gt;
-      &lt;/template&gt;
-      &lt;template v-else&gt;Vigilance crues indisponible&lt;/template&gt;
-    &lt;/span&gt;
-    &lt;a class="vigicrues-banner__link" :href="url" target="_blank" rel="noopener noreferrer"&gt;
-      Voir sur Vigicrues
-      &lt;BaseIcon name="ext" /&gt;
-    &lt;/a&gt;
+  &lt;div class="exploit__cell exploit__cell--vigi"&gt;
+    &lt;div class="flex flex-col gap-1"&gt;
+      &lt;div class="flex flex-row justify-between"&gt;
+        &lt;span class="exploit__cell-label"&gt;Vigicrues&lt;/span&gt;
+        &lt;a class="vigicrues-banner__link" :href="url" target="_blank" rel="noopener noreferrer"&gt;
+          Voir sur Vigicrues
+          &lt;BaseIcon name="ext" /&gt;
+        &lt;/a&gt;
+      &lt;/div&gt;
+      &lt;div class="vigicrues-banner" :class="`vigicrues-banner--${tone}`"&gt;
+        &lt;span class="vigicrues-banner__dot" /&gt;
+        &lt;span class="vigicrues-banner__text"&gt;
+          &lt;template v-if="info &amp;&amp; level"&gt;
+            &lt;strong&gt;{{ level.label }}&lt;/strong&gt; — tronçon {{ info.name }}
+            &lt;em v-if="info.stale" class="vigicrues-banner__stale"&gt;(données en cache)&lt;/em&gt;
+          &lt;/template&gt;
+          &lt;template v-else&gt;Vigilance crues indisponible&lt;/template&gt;
+        &lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
   &lt;/div&gt;
 &lt;/template&gt;
 &nbsp;
@@ -340,7 +361,7 @@ const url = computed(() =&gt; bassinUrl(props.info?.parentCode ?? VIGICRUES_TERR
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-10-01T09:38:20.832Z
+                at 2026-10-21T08:19:45.540Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

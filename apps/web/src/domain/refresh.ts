@@ -1,5 +1,3 @@
-import type { SeriesPoint } from './types'
-
 const MINUTE_MS = 60_000
 
 /**

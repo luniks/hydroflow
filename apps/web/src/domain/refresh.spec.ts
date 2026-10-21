@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { needsRefresh } from './refresh'
-import type { SeriesPoint } from './types'
 
 const NOW = Date.parse('2026-01-01T12:00:00Z')
-const pt = (agoMin: number): SeriesPoint => ({ t: new Date(NOW - agoMin * 60_000).toISOString(), y: 1 })
 
 describe('needsRefresh', () => {
   it('ne recharge jamais quand le rafraîchissement automatique est désactivé', () => {
