@@ -7,6 +7,7 @@ import type { Thresholds } from '@/domain/types'
 import BaseState from '../ui/BaseState.vue'
 import StationCard from './StationCard.vue'
 
+defineProps<{ nowMs: number }>()
 const emit = defineEmits<{ refresh: [code: string]; openConfig: [tab: string] }>()
 
 const { stations, stateOf } = useStations()
@@ -55,7 +56,10 @@ function onThresholds(code: string, next: Thresholds) {
       :window="window"
       :hours="hours"
       :is-reference="station.code === exploit.refCode"
+      :exploit="exploit"
+      :now-ms="nowMs"
       @refresh="emit('refresh', $event)"
+      @open-config="emit('openConfig', $event)"
       @update:thresholds="onThresholds"
     />
   </section>

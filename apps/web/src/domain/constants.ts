@@ -1,4 +1,4 @@
-import type { ExploitConfig, RainPointDef, Range, Station, Thresholds } from './types'
+import type { AnalyzeOptions, ExploitConfig, RainPointDef, Range, Station, Thresholds } from './types'
 
 export const DEFAULT_THRESHOLDS: Thresholds = {
   level: { low: 0.5, high: 2.5 },
@@ -104,6 +104,18 @@ export const LEVEL_FLAT_THRESHOLD = 0.005
 
 export function flowFlatThreshold(currentFlow: number): number {
   return Math.max(Math.abs(currentFlow) * 0.02, 0.05)
+}
+
+/** Options d'analyse d'une serie de debit : palier a 1 % du debit (0,05 m³/s au minimum). */
+export function flowAnalyzeOptions(currentFlow: number): AnalyzeOptions {
+  return { relFloor: 0.01, absFloor: 0.05, legacyFlat: flowFlatThreshold(currentFlow) }
+}
+
+/** Options d'analyse d'une serie de niveau (en m) : palier de 0,5 cm. */
+export const LEVEL_ANALYZE_OPTIONS: AnalyzeOptions = {
+  relFloor: 0,
+  absFloor: 0.005,
+  legacyFlat: LEVEL_FLAT_THRESHOLD,
 }
 
 export const AUTO_REFRESH_OPTIONS = [0, 5, 10, 30] as const

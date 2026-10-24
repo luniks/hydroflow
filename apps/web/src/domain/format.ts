@@ -38,3 +38,8 @@ export function fmtDuration(minutes: number): string {
   const rest = m % 60
   return rest === 0 ? `${h} h` : `${h} h ${String(rest).padStart(2, '0')}`
 }
+
+/** Heure locale « 15:30 » d'un instant (ms). */
+export function fmtClock(ms: number): string {
+  return new Date(ms).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+}

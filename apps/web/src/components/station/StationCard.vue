@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { LEVEL_FLAT_THRESHOLD, flowFlatThreshold } from '@/domain/constants'
-import { fmtDate, fmtLevel, fmtQ, levelRateToCmPerHour, pluralize } from '@/domain/format'
+import { LEVEL_ANALYZE_OPTIONS, flowAnalyzeOptions } from '@/domain/constants'
+import { fmtDate, fmtLevel, fmtQ, fmtTrend, levelRateToCmPerHour, pluralize } from '@/domain/format'
 import { mean, rangeStatus } from '@/domain/series'
-import { computeTrend } from '@/domain/trend'
-import type { Station, StationState, Thresholds, TimeWindow } from '@/domain/types'
+import { exploitBands, stationBands, stationLine } from '@/domain/stationTrend'
+import { analyzeSeries } from '@/domain/trend'
+import type { ExploitConfig, SeriesPoint, Station, StationState, Thresholds, TimeWindow } from '@/domain/types'
 import BaseBadge from '../ui/BaseBadge.vue'
 import BaseButton from '../ui/BaseButton.vue'
 import BaseIcon from '../ui/BaseIcon.vue'
@@ -20,11 +21,16 @@ const props = defineProps<{
   window: TimeWindow
   hours: number
   isReference: boolean
+  /** Seuils d'exploitation : ceux de la station de reference, en lecture seule. */
+  exploit: ExploitConfig
+  /** Horloge de l'application (ms), pour l'age de la derniere mesure. */
+  nowMs: number
 }>()
 
 const emit = defineEmits<{
   refresh: [code: string]
   'update:thresholds': [code: string, thresholds: Thresholds]
+  openConfig: [tab: string]
 }>()
 
 const menuOpen = ref(false)
@@ -39,13 +45,49 @@ const levelMean = computed(() => mean(props.state.points.map((p) => p.y)))
 const flowMean = computed(() => mean(props.state.flowPoints.map((p) => p.y)))
 const lastFlow = computed(() => props.state.flowPoints.at(-1)?.y ?? null)
 
-const levelTrend = computed(() => computeTrend(props.state.points, LEVEL_FLAT_THRESHOLD))
-const flowTrend = computed(() =>
-  computeTrend(props.state.flowPoints, flowFlatThreshold(lastFlow.value ?? 0)),
+const lastLevel = computed(() => props.state.points.at(-1)?.y ?? null)
+
+/** Age (min) de la derniere mesure ; sans objet en navigation dans le passe. */
+function ageMin(points: SeriesPoint[]): number | null {
+  const last = points.at(-1)
+  if (!last || props.window.dateFin) return null
+  return Math.max(0, (props.nowMs - Date.parse(last.t)) / 60_000)
+}
+
+// Mesure principale (debit, sinon niveau) : la ligne annonce le prochain seuil franchi. Station de reference :
+// seuils d'exploitation. L'autre mesure garde une ligne simple.
+const flowBands = computed(() =>
+  props.isReference ? exploitBands(props.exploit) : stationBands(props.thresholds.flow),
+)
+const flowLine = computed(() =>
+  lastFlow.value === null
+    ? null
+    : stationLine(analyzeSeries(props.state.flowPoints, flowAnalyzeOptions(lastFlow.value)), lastFlow.value, {
+        bands: flowBands.value,
+        formatRate: (r) => fmtTrend(r, 'm³/s/h'),
+        ageMin: ageMin(props.state.flowPoints),
+      }),
+)
+const levelLine = computed(() =>
+  lastLevel.value === null
+    ? null
+    : stationLine(analyzeSeries(props.state.points, LEVEL_ANALYZE_OPTIONS), lastLevel.value, {
+        bands: lastFlow.value === null ? stationBands(props.thresholds.level) : [],
+        formatRate: (r) => fmtTrend(levelRateToCmPerHour(r), 'cm/h'),
+        ageMin: ageMin(props.state.points),
+      }),
 )
 
-const levelStatus = computed(() => rangeStatus(levelMean.value, props.thresholds.level))
-const flowStatus = computed(() => rangeStatus(flowMean.value, props.thresholds.flow))
+/** Badge « Bas / Haut » sur la derniere valeur (pas la moyenne) ; la reference n'en a pas : sa zone est dans le suivi d'exploitation. */
+const flowStatus = computed(() =>
+  props.isReference || lastFlow.value === null ? null : rangeStatus(lastFlow.value, props.thresholds.flow),
+)
+const levelStatus = computed(() => (lastLevel.value === null ? null : rangeStatus(lastLevel.value, props.thresholds.level)))
+const flowStatusTitle = computed(() =>
+  flowStatus.value && flowStatus.value !== 'ok'
+    ? `Dernière mesure ${fmtQ(lastFlow.value ?? 0)} m³/s : ${flowStatus.value === 'high' ? 'au-dessus' : 'en dessous'} du seuil`
+    : undefined,
+)
 
 const lastMeasure = computed(() => props.state.points.at(-1)?.t ?? props.state.flowPoints.at(-1)?.t)
 
@@ -72,6 +114,11 @@ const rangeHigh = computed({
 
 function commit(range: { low: number; high: number }) {
   emit('update:thresholds', props.station.code, { ...props.thresholds, [thresholdsKey.value]: range })
+}
+
+function openConfig() {
+  menuOpen.value = false
+  emit('openConfig', 'seuils')
 }
 
 function onDocumentClick(event: MouseEvent) {
@@ -110,9 +157,22 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
             @click="menuOpen = !menuOpen"
           />
           <div v-if="menuOpen" class="card__dropdown">
-            <p class="card__dropdown-title">{{ thresholdsLabel }}</p>
-            <BaseNumberInput v-model="rangeLow" label="Bas" :unit="thresholdsUnit" :step="thresholdsStep" />
-            <BaseNumberInput v-model="rangeHigh" label="Haut" :unit="thresholdsUnit" :step="thresholdsStep" />
+            <template v-if="isReference">
+              <p class="card__dropdown-title">Seuils d'exploitation</p>
+              <dl class="card__readonly">
+                <div><dt>Débit minimal</dt><dd>{{ fmtQ(exploit.minFlow) }} m³/s</dd></div>
+                <div><dt>Démarrage</dt><dd>{{ fmtQ(exploit.startFlow) }} m³/s</dd></div>
+                <div><dt>Zone optimale</dt><dd>{{ fmtQ(exploit.optMin) }} – {{ fmtQ(exploit.optMax) }} m³/s</dd></div>
+                <div><dt>Débit maximum</dt><dd>{{ fmtQ(exploit.maxFlow) }} m³/s</dd></div>
+                <div><dt>Délai de propagation</dt><dd>{{ exploit.propagationMin }} min</dd></div>
+              </dl>
+              <button type="button" class="card__link" @click="openConfig">Modifier dans la configuration</button>
+            </template>
+            <template v-else>
+              <p class="card__dropdown-title">{{ thresholdsLabel }}</p>
+              <BaseNumberInput v-model="rangeLow" label="Bas" :unit="thresholdsUnit" :step="thresholdsStep" />
+              <BaseNumberInput v-model="rangeHigh" label="Haut" :unit="thresholdsUnit" :step="thresholdsStep" />
+            </template>
           </div>
         </div>
       </div>
@@ -128,8 +188,8 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
         unit="m³/s"
         color="var(--flow)"
         :status="flowStatus"
-        :trend="flowTrend"
-        trend-unit="m³/s par h"
+        :status-title="flowStatusTitle"
+        :line="flowLine"
       />
       <MetricValue
         v-if="levelMean !== null"
@@ -137,9 +197,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
         :value="levelMean !== null ? fmtLevel(levelMean) : null"
         unit="m"
         :status="flowMean !== null ? null : levelStatus"
-        :trend="levelTrend"
-        trend-unit="cm/h"
-        :trend-rate="levelTrend ? levelRateToCmPerHour(levelTrend.ratePerHour) : undefined"
+        :line="levelLine"
       />
     </div>
 
@@ -261,6 +319,41 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
   border: 1px solid var(--card-border);
   border-radius: var(--radius-panel);
   box-shadow: var(--shadow-dropdown);
+}
+
+.card__readonly {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+}
+
+.card__readonly > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card__readonly dt {
+  color: var(--muted);
+}
+
+.card__readonly dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.card__link {
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
 }
 
 .card__dropdown-title {

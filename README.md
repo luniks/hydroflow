@@ -82,6 +82,23 @@ Seuils (onglet **Seuils d'exploitation**) :
 | Plage de rendement optimal | m³/s | Zone verte de la jauge. |
 | Délai de propagation | min | Temps que met le débit de la station de référence pour arriver à la turbine. |
 
+### Indicateurs de tendance
+
+Chaque carte de station affiche **une seule ligne** sous la valeur : le prochain seuil franchi et son délai
+(`▲ Haut ~40 min`), sinon un palier (`▬ stable 20 min`) ou la pente (`▲ +3.20 m³/s/h`), suivie de l'âge de la
+dernière mesure quand elle a plus de 15 min (`· 1 h 20`). Les seuils sont ceux de la station (Bas / Haut) ; pour la
+station de référence ce sont les seuils d'exploitation, en lecture seule (modifiables dans la configuration). Le temps
+est celui de la station : le délai de propagation n'intervient que dans le suivi d'exploitation.
+
+Le calcul (`domain/trend.ts`) lisse les creux isolés, détecte d'abord un **palier** (15 min dans la tolérance de bruit
+mesuré de la station), sinon retient la **pente** de la fenêtre de 30 puis 60 min si elle dépasse 3 erreurs-types, et
+n'applique la **courbure** (ETA d'une courbe qui accélère) que si elle est significative. Une série trop courte retombe
+sur la pente 2 points sur 1 h.
+
+Dans la zone dépliée du suivi d'exploitation : détail de la prévision, heure d'arrivée de la dernière mesure à la
+turbine, et bilan de la période (temps en zone optimale, arrêts). La prévision annonce aussi l'entrée et la sortie de la
+zone optimale.
+
 ## Sources de données
 
 [Hub'Eau Hydrométrie](https://hubeau.eaufrance.fr/) · [Open-Meteo](https://open-meteo.com/) ·

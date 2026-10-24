@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  fmtClock,
   fmtDate,
   fmtDuration,
   fmtLevel,
@@ -85,5 +86,13 @@ describe('fmtDuration', () => {
   it('arrondit à la minute et ignore les durées négatives', () => {
     expect(fmtDuration(59.6)).toBe('1 h')
     expect(fmtDuration(-3)).toBe('0 min')
+  })
+})
+
+describe('fmtClock', () => {
+  it('donne l’heure locale sur deux chiffres', () => {
+    const ms = Date.parse('2026-01-01T12:05:00Z')
+    expect(fmtClock(ms)).toMatch(/^\d{2}:\d{2}$/)
+    expect(fmtClock(ms)).toBe(new Date(ms).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))
   })
 })

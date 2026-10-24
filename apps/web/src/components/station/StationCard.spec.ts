@@ -4,8 +4,8 @@ import StationCard from './StationCard.vue'
 import SparklineChart from '../charts/SparklineChart.vue'
 import MetricValue from '../metric/MetricValue.vue'
 import BaseBadge from '../ui/BaseBadge.vue'
-import { DEFAULT_STATIONS, normThresholds } from '@/domain/constants'
-import type { StationState } from '@/domain/types'
+import { DEFAULT_STATIONS, EXPLOIT_DEFAULTS, normThresholds } from '@/domain/constants'
+import type { StationState, TimeWindow } from '@/domain/types'
 
 const station = DEFAULT_STATIONS[0]!
 
@@ -27,21 +27,38 @@ function makeState(overrides: Partial<StationState> = {}): StationState {
   }
 }
 
-function factory(state: StationState = makeState(), isReference = false) {
+const ENDED: TimeWindow = {
+  dateDebut: new Date('2026-10-01T00:00:00Z'),
+  dateFin: new Date('2026-10-01T04:00:00Z'),
+}
+const LIVE: TimeWindow = { dateDebut: new Date('2026-10-01T00:00:00Z'), dateFin: null }
+const NOW = Date.parse('2026-10-01T04:00:00Z')
+
+function factory(
+  state: StationState = makeState(),
+  isReference = false,
+  extra: { window?: TimeWindow; nowMs?: number } = {},
+) {
   return mount(StationCard, {
     props: {
       station,
       state,
       thresholds: normThresholds(),
-      window: {
-        dateDebut: new Date('2026-10-01T00:00:00Z'),
-        dateFin: new Date('2026-10-01T04:00:00Z'),
-      },
+      window: extra.window ?? ENDED,
       hours: 24,
       isReference,
+      exploit: EXPLOIT_DEFAULTS,
+      nowMs: extra.nowMs ?? NOW,
     },
   })
 }
+
+/** Debit ou niveau reliant deux mesures a 1 h d'ecart : pente de +(b - a) par heure. */
+const rising = (a: number, b: number) => [
+  { t: '2026-10-01T00:00:00Z', y: a },
+  { t: '2026-10-01T01:00:00Z', y: b },
+]
+const flowLine = (wrapper: ReturnType<typeof factory>) => wrapper.findAllComponents(MetricValue)[0]!.props('line')!
 
 describe('StationCard', () => {
   it('affiche le nom résolu par l’API et la rivière', () => {
@@ -142,5 +159,105 @@ describe('StationCard', () => {
     const text = factory().find('.card__meta').text()
     expect(text).toContain('Dernière mesure')
     expect(text).toContain('2 mesures — 24 h')
+  })
+
+  describe('ligne de tendance', () => {
+    it('donne la pente quand aucun seuil n’est proche', () => {
+      // 10 -> 12 m³/s en 2 h : +1 m³/s/h, le seuil haut (20) est a 8 h
+      expect(flowLine(factory())).toMatchObject({ text: '▲ +1.00 m³/s/h', tone: 'neutral' })
+    })
+
+    it('annonce le prochain seuil de la station avec son délai', () => {
+      const wrapper = factory(makeState({ flowPoints: rising(10, 17) }))
+      expect(flowLine(wrapper)).toMatchObject({ text: '▲ Haut ~26 min', tone: 'warn' })
+    })
+
+    it('station de référence : reprend les zones d’exploitation (entrée en zone optimale)', () => {
+      const wrapper = factory(makeState({ flowPoints: rising(30, 40) }), true)
+      expect(flowLine(wrapper)).toMatchObject({ text: '▲ Optimale ~30 min', tone: 'ok' })
+    })
+
+    it('mesure principale = niveau quand il n’y a pas de débit : seuils de niveau', () => {
+      // +0,35 m/h : le seuil haut de niveau (2,5 m) est franchi dans 25,7 min, soit a la 26e minute
+      const wrapper = factory(makeState({ flowPoints: [], points: rising(2, 2.35) }))
+      expect(wrapper.findAllComponents(MetricValue)[0]!.props('line')).toMatchObject({ text: '▲ Haut ~26 min' })
+    })
+
+    it('le niveau secondaire reste une ligne simple, en cm/h', () => {
+      const wrapper = factory(makeState({ points: rising(1, 1.4) }))
+      expect(wrapper.findAllComponents(MetricValue)[1]!.props('line')).toMatchObject({ text: '▲ +40.00 cm/h' })
+    })
+
+    it('signale l’âge d’une dernière mesure ancienne en direct, pas en navigation dans le passé', () => {
+      const state = makeState({ flowPoints: rising(10, 12) }) // dernière mesure à 01:00
+      const live = factory(state, false, { window: LIVE, nowMs: Date.parse('2026-10-01T02:20:00Z') })
+      expect(flowLine(live).text).toBe('▲ +2.00 m³/s/h · 1 h 20')
+      expect(flowLine(factory(state, false, { nowMs: Date.parse('2026-10-01T02:20:00Z') })).text).toBe('▲ +2.00 m³/s/h')
+    })
+
+    it('ne signale rien pour une mesure récente', () => {
+      const live = factory(makeState({ flowPoints: rising(10, 12) }), false, {
+        window: LIVE,
+        nowMs: Date.parse('2026-10-01T01:10:00Z'),
+      })
+      expect(flowLine(live).text).toBe('▲ +2.00 m³/s/h')
+    })
+  })
+
+  describe('badge « Bas / Haut »', () => {
+    it('porte sur la dernière valeur, pas sur la moyenne', () => {
+      // moyenne 13,5 m³/s (dans la plage), mais dernière valeur 25 m³/s (au-dessus du seuil haut de 20)
+      const metric = factory(makeState({ flowPoints: rising(2, 25) })).findAllComponents(MetricValue)[0]!
+      expect(metric.props('status')).toBe('high')
+      expect(metric.props('statusTitle')).toBe('Dernière mesure 25 m³/s : au-dessus du seuil')
+    })
+
+    it('signale une dernière valeur sous le seuil bas', () => {
+      const metric = factory(makeState({ flowPoints: rising(10, 3) })).findAllComponents(MetricValue)[0]!
+      expect(metric.props('status')).toBe('low')
+      expect(metric.props('statusTitle')).toContain('en dessous du seuil')
+    })
+
+    it('n’affiche rien dans la plage', () => {
+      const metric = factory().findAllComponents(MetricValue)[0]!
+      expect(metric.props('status')).toBe('ok')
+      expect(metric.props('statusTitle')).toBeUndefined()
+    })
+
+    it('la station de référence n’en a pas : sa zone est dans le suivi d’exploitation', () => {
+      const wrapper = factory(makeState({ flowPoints: rising(2, 25) }), true)
+      expect(wrapper.findAllComponents(MetricValue)[0]!.props('status')).toBeNull()
+    })
+
+    it('sans débit, porte sur le niveau (dernière valeur)', () => {
+      const metric = factory(makeState({ flowPoints: [], points: rising(2, 3) })).findAllComponents(MetricValue)[0]!
+      expect(metric.props('status')).toBe('high')
+    })
+  })
+
+  describe('station de référence : seuils d’exploitation en lecture seule', () => {
+    it('affiche les seuils sans champ d’édition, avec un lien vers la configuration', async () => {
+      const wrapper = factory(makeState(), true)
+      await wrapper.find('[aria-label="Réglages des seuils"]').trigger('click')
+      const dropdown = wrapper.find('.card__dropdown')
+
+      expect(dropdown.find('.card__dropdown-title').text()).toBe("Seuils d'exploitation")
+      expect(dropdown.findAll('input')).toHaveLength(0)
+      const text = dropdown.find('.card__readonly').text()
+      expect(text).toContain('20 m³/s')
+      expect(text).toContain('30 m³/s')
+      expect(text).toContain('45 – 135 m³/s')
+      expect(text).toContain('150 m³/s')
+      expect(text).toContain(`${EXPLOIT_DEFAULTS.propagationMin} min`)
+    })
+
+    it('ouvre l’onglet des seuils d’exploitation et referme le menu', async () => {
+      const wrapper = factory(makeState(), true)
+      await wrapper.find('[aria-label="Réglages des seuils"]').trigger('click')
+      await wrapper.find('.card__link').trigger('click')
+
+      expect(wrapper.emitted('openConfig')).toEqual([['seuils']])
+      expect(wrapper.find('.card__dropdown').exists()).toBe(false)
+    })
   })
 })

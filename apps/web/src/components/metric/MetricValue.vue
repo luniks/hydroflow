@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import BaseBadge from '../ui/BaseBadge.vue'
 import TrendIndicator from './TrendIndicator.vue'
-import type { RangeStatus, Trend } from '@/domain/types'
+import type { StationLine } from '@/domain/stationTrend'
+import type { RangeStatus } from '@/domain/types'
 
 withDefaults(
   defineProps<{
@@ -10,11 +11,12 @@ withDefaults(
     unit: string
     color?: string
     status?: RangeStatus | null
-    trend?: Trend | null
-    trendUnit?: string
-    trendRate?: number
+    /** Explique le badge « Bas / Haut » (infobulle). */
+    statusTitle?: string
+    /** Ligne de tendance, une seule ligne sous la valeur. */
+    line?: StationLine | null
   }>(),
-  { color: 'var(--accent)', status: null, trend: null, trendUnit: '', trendRate: undefined },
+  { color: 'var(--accent)', status: null, statusTitle: undefined, line: null },
 )
 
 const STATUS_LABEL: Record<Exclude<RangeStatus, 'ok'>, string> = { low: 'Bas', high: 'Haut' }
@@ -25,7 +27,12 @@ const STATUS_LABEL: Record<Exclude<RangeStatus, 'ok'>, string> = { low: 'Bas', h
     <p class="metric__label" :style="{ color }">
       <span class="metric__dot" />
       {{ label }}
-      <BaseBadge v-if="status && status !== 'ok'" :tone="status === 'high' ? 'warn' : 'accent'" size="sm">
+      <BaseBadge
+        v-if="status && status !== 'ok'"
+        :tone="status === 'high' ? 'warn' : 'accent'"
+        size="sm"
+        :title="statusTitle"
+      >
         {{ STATUS_LABEL[status] }}
       </BaseBadge>
     </p>
@@ -33,7 +40,7 @@ const STATUS_LABEL: Record<Exclude<RangeStatus, 'ok'>, string> = { low: 'Bas', h
       <span class="metric__number">{{ value ?? '—' }}</span>
       <span v-if="value" class="metric__unit">{{ unit }}</span>
     </p>
-    <TrendIndicator :trend="trend" :unit="trendUnit" :rate="trendRate" />
+    <TrendIndicator :line="line" />
   </div>
 </template>
 

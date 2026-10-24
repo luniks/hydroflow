@@ -1,30 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { Trend } from '@/domain/types'
-import { fmtTrend } from '@/domain/format'
+import type { StationLine } from '@/domain/stationTrend'
 
-const props = defineProps<{ trend: Trend | null; unit: string; rate?: number }>()
-
-const tone = computed(() => {
-  if (!props.trend || props.trend.dir === 'flat') return 'neutral'
-  return props.trend.dir === 'up' ? 'alert' : 'ok'
-})
-
-const arrow = computed(() => {
-  if (!props.trend) return ''
-  return props.trend.dir === 'up' ? '▲' : props.trend.dir === 'down' ? '▼' : '▬'
-})
-
-const text = computed(() =>
-  props.trend ? fmtTrend(props.rate ?? props.trend.ratePerHour, props.unit) : '',
-)
+defineProps<{ line: StationLine | null }>()
 </script>
 
 <template>
-  <p v-if="trend" class="trend" :class="`trend--${tone}`">
-    <span aria-hidden="true">{{ arrow }}</span>
-    {{ text }}
-  </p>
+  <p v-if="line" class="trend" :class="`trend--${line.tone}`" :title="line.title">{{ line.text }}</p>
 </template>
 
 <style scoped>
@@ -33,6 +14,10 @@ const text = computed(() =>
   font-size: 0.78rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  /* Une seule ligne : sur mobile, le texte complet est dans l'infobulle. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .trend--neutral {
@@ -43,7 +28,7 @@ const text = computed(() =>
   color: var(--green);
 }
 
-.trend--alert {
+.trend--warn {
   color: var(--orange);
 }
 </style>
