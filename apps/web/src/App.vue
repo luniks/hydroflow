@@ -55,7 +55,7 @@ onMounted(() => void loadAll())
 
     <main class="app__main">
       <ExploitPanel :vigicrues="vigicrues" :now-ms="nowMs" />
-      <StationGrid @refresh="refreshStation" @open-config="openConfig" />
+      <StationGrid :now-ms="nowMs" @refresh="refreshStation" @open-config="openConfig" />
       <RainSection :now-ms="nowMs" @refresh="refreshRainPoint" @open-config="openConfig" />
     </main>
 

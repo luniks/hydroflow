@@ -70,6 +70,8 @@ export type OutlookKind =
   | 'run-stable'
   | 'run-watch'
   | 'stop-expected'
+  | 'opt-exit-expected'
+  | 'opt-entry-expected'
   | 'stop-now'
   | 'stopped-stable'
   | 'stopped-watch'
@@ -89,6 +91,8 @@ export interface TurbineOutlook {
   stability: OutlookStability | null
   /** Etat de la turbine suppose pour la prevision ; `null` si aucune prevision. */
   turbine: TurbineState | null
+  /** Derniere mesure de la station et heure (ms) a laquelle elle arrive a la turbine ; `null` sans prevision. */
+  arrival: { atMs: number; flow: number } | null
   /** Delai avant le changement d'etat prevu, en minutes. */
   inMinutes: number | null
   source: OutlookSource | null
@@ -97,6 +101,31 @@ export interface TurbineOutlook {
 }
 
 export type TrendDirection = 'up' | 'down' | 'flat'
+
+/** Reglages de `analyzeSeries`, propres a la grandeur analysee (debit, niveau). */
+export interface AnalyzeOptions {
+  /** Part du niveau courant en dessous de laquelle une variation est un palier (ex. 0,01 = 1 %). */
+  relFloor: number
+  /** Variation absolue minimale d'un palier, dans l'unite de la serie. */
+  absFloor: number
+  /** Seuil « plat » (unite/h) de la pente 2 points, utilisee quand la serie est trop courte pour une regression. */
+  legacyFlat: number
+}
+
+/** Lecture d'une serie : palier, pente significative, et courbure quand elle est reelle. */
+export interface SeriesAnalysis {
+  dir: TrendDirection
+  /** Pente retenue (unite/h) ; 0 pour un palier ou sans tendance significative. */
+  ratePerHour: number
+  /** Fenetre (min) de la pente retenue ; `null` pour un palier, un repli ou une serie sans tendance. */
+  windowMin: number | null
+  /** Duree (min) du palier en cours (15 min au moins), sinon `null`. */
+  stableMin: number | null
+  /** Tendance quadratique au dernier instant (pente `b` en unite/h, courbure `a` en unite/h²) si elle est significative. */
+  curve: { b: number; a: number } | null
+  /** `legacy` : trop peu de points pour une regression, repli sur la pente 2 points sur 1 h. */
+  method: 'regression' | 'legacy'
+}
 
 export interface Trend {
   dir: TrendDirection

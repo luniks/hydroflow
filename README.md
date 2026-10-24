@@ -72,39 +72,32 @@ Stations suivies, seuils, réglages d'exploitation et points de pluie se règlen
 
 ## Suivi d'exploitation
 
-Seuils (onglet **Seuils d'exploitation**), tous en m³/s sauf le délai :
+Seuils (onglet **Seuils d'exploitation**) :
 
-| Réglage | Rôle |
-| --- | --- |
-| Débit minimal | En dessous, la turbine s'arrête. |
-| Débit maximum | Au-dessus, la turbine s'arrête. |
-| Débit de démarrage | À partir de ce seuil la turbine peut démarrer ; compris entre minimal et maximum. Affiché par un tiret vertical sur la jauge. |
-| Plage de rendement optimal | Zone verte de la jauge. |
-| Délai de propagation (min) | Temps que met le débit de la station de référence pour arriver à la turbine. |
+| Réglage | Unité | Rôle |
+| --- | --- | --- |
+| Débit minimal | m³/s | En dessous, la turbine s'arrête. |
+| Débit maximum | m³/s | Au-dessus, la turbine s'arrête. |
+| Débit de démarrage | m³/s | À partir de ce seuil la turbine peut démarrer ; compris entre minimal et maximum. Affiché par un tiret vertical sur la jauge. |
+| Plage de rendement optimal | m³/s | Zone verte de la jauge. |
+| Délai de propagation | min | Temps que met le débit de la station de référence pour arriver à la turbine. |
 
-Le texte sous le débit amont du panneau (qui remplace l'ancien « X m³/s sous le débit… ») anticipe les changements d'état de la turbine ;
-le badge garde la zone du débit amont, avec un statut en plus : « Mesure trop ancienne ».
+### Indicateurs de tendance
 
-L'application ne mesure pas l'état de la turbine : elle le **déduit** en rejouant l'historique du débit affiché (décalé du délai de propagation)
-avec les règles ci-dessous, en supposant que la turbine démarre dès que c'est possible. L'état initial est « en marche » si la première
-mesure de l'historique permet de démarrer, « à l'arrêt » sinon : avec une plage d'historique courte, cette hypothèse pèse davantage.
+Chaque carte de station affiche **une seule ligne** sous la valeur : le prochain seuil franchi et son délai
+(`▲ Haut ~40 min`), sinon un palier (`▬ stable 20 min`) ou la pente (`▲ +3.20 m³/s/h`), suivie de l'âge de la
+dernière mesure quand elle a plus de 15 min (`· 1 h 20`). Les seuils sont ceux de la station (Bas / Haut) ; pour la
+station de référence ce sont les seuils d'exploitation, en lecture seule (modifiables dans la configuration). Le temps
+est celui de la station : le délai de propagation n'intervient que dans le suivi d'exploitation.
 
-- Le débit à la turbine à l'instant *t* est le débit mesuré à la station à *t − délai*. Ce qui est déjà passé à la station est donc **connu** (« prévu ») ;
-  au-delà, la tendance de la dernière heure est prolongée (« probable », préfixé de `~`), sur 2 h maximum.
-- En marche : arrêt si le débit passe sous le minimal ou au-dessus du maximum.
-- À l'arrêt : démarrage possible si débit de démarrage ≤ débit ≤ débit maximum. Entre minimal et démarrage, l'état courant est conservé (hystérésis).
-- « Stable » = aucun changement prévu sur l'horizon et au moins 10 % de la plage [minimal ; maximum] de marge avec le seuil le plus proche, sinon « à surveiller ».
-- Une mesure de plus de 2 h désactive toute prévision.
+Le calcul (`domain/trend.ts`) lisse les creux isolés, détecte d'abord un **palier** (15 min dans la tolérance de bruit
+mesuré de la station), sinon retient la **pente** de la fenêtre de 30 puis 60 min si elle dépasse 3 erreurs-types, et
+n'applique la **courbure** (ETA d'une courbe qui accélère) que si elle est significative. Une série trop courte retombe
+sur la pente 2 points sur 1 h.
 
-Les constantes (`OUTLOOK_HORIZON_MIN`, `OUTLOOK_STALE_MIN`, `OUTLOOK_WATCH_RATIO`) sont dans `apps/web/src/domain/constants.ts`.
-Une configuration enregistrée avec l'ancien format (débit de réserve / capacité maximum) est migrée automatiquement.
-
-## Rafraîchissement des données
-
-- **Manuel** (bouton), **automatique** (intervalle réglable, 0 = désactivé) et **au retour sur l'onglet** ou quand le réseau revient, si les données sont plus vieilles que l'intervalle (les minuteurs sont suspendus en arrière-plan et en veille).
-- Une demande de chargement faite **pendant** un chargement (changement de période, fermeture de la configuration…) n'est pas perdue : elle déclenche un seul rechargement une fois le courant terminé, avec la période du moment. Les ticks du minuteur, eux, sont ignorés pendant un chargement.
-- Chaque station et chaque point de pluie n'applique que la réponse du **dernier** chargement lancé : une réponse lente et ancienne ne remplace jamais une donnée plus récente.
-- « Dernière mise à jour » n'avance que si au moins une source (Hub'Eau, Open-Meteo, Vigicrues) a répondu ; l'en-tête indique aussi l'âge de la mesure la plus ancienne (vue en direct uniquement). En cas d'échec, les anciennes données restent affichées avec un bandeau d'erreur sur la carte concernée.
+Dans la zone dépliée du suivi d'exploitation : détail de la prévision, heure d'arrivée de la dernière mesure à la
+turbine, et bilan de la période (temps en zone optimale, arrêts). La prévision annonce aussi l'entrée et la sortie de la
+zone optimale.
 
 ## Sources de données
 

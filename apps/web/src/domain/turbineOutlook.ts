@@ -1,11 +1,11 @@
 import {
-  flowFlatThreshold,
+  flowAnalyzeOptions,
   OUTLOOK_HORIZON_MIN,
   OUTLOOK_STALE_MIN,
   OUTLOOK_WATCH_RATIO,
 } from './constants'
 import { fmtDuration, fmtQ } from './format'
-import { computeTrend } from './trend'
+import { analyzeSeries, projectSeries } from './trend'
 import type {
   ExploitConfig,
   OutlookKind,
@@ -54,17 +54,35 @@ const canStart = (v: number, c: ExploitConfig): boolean => v >= c.startFlow && v
  * « arret » sinon : plus l'historique affiche est court, plus cette hypothese pese.
  * `points` ne doit pas etre vide.
  */
+/** Rejoue des debits successifs : etat final de la turbine et nombre d'arrets / demarrages rencontres. */
+export function replayTurbine(
+  flows: number[],
+  c: ExploitConfig,
+): { state: TurbineState; stops: number; starts: number } {
+  let state: TurbineState = canStart(flows[0]!, c) ? 'run' : 'stop'
+  let stops = 0
+  let starts = 0
+  for (const y of flows) {
+    if (state === 'stop' && canStart(y, c)) {
+      state = 'run'
+      starts++
+    } else if (state === 'run' && (y < c.minFlow || y > c.maxFlow)) {
+      state = 'stop'
+      stops++
+    }
+  }
+  return { state, stops, starts }
+}
+
 export function inferTurbineState(points: SeriesPoint[], c: ExploitConfig, nowMs: number): TurbineState {
   const arrivedBefore = nowMs - c.propagationMin * MINUTE_MS
   const arrived = points.filter((p) => Date.parse(p.t) <= arrivedBefore)
   const seen = arrived.length ? arrived : [points[0]!]
 
-  let state: TurbineState = canStart(seen[0]!.y, c) ? 'run' : 'stop'
-  for (const { y } of seen) {
-    if (state === 'stop' && canStart(y, c)) state = 'run'
-    else if (state === 'run' && (y < c.minFlow || y > c.maxFlow)) state = 'stop'
-  }
-  return state
+  return replayTurbine(
+    seen.map((p) => p.y),
+    c,
+  ).state
 }
 
 /**
@@ -88,8 +106,8 @@ export function turbineOutlook(points: SeriesPoint[], c: ExploitConfig, nowMs: n
  * Prevision pour un etat de turbine donne. Principe : le debit mesure a la station de reference
  * arrive a la turbine apres `propagationMin`.
  * - jusqu'a (derniere mesure + delai), le debit a la turbine est deja connu (source `observed`) ;
- * - au-dela, on prolonge la tendance de la derniere heure (source `estimated`), jusqu'a
- *   `OUTLOOK_HORIZON_MIN` minutes.
+ * - au-dela, on prolonge la tendance de la serie (pente significative, courbure si elle est reelle ;
+ *   voir `analyzeSeries`, source `estimated`), jusqu'a `OUTLOOK_HORIZON_MIN` minutes.
  *
  * Regles :
  * - en marche, la turbine s'arrete si q < debit minimal ou q > debit maximum ;
@@ -107,19 +125,20 @@ export function outlookForState(
   const lastIdx = points.length - 1
   const lastT = times[lastIdx]!
   const lastY = points[lastIdx]!.y
-  const mk = (kind: OutlookKind, tone: TurbineOutlook['tone'], stability: OutlookStability, headline: string) =>
-    base(kind, tone, stability, turbine, headline)
+  const mk = (kind: OutlookKind, tone: TurbineOutlook['tone'], stability: OutlookStability, headline: string) => ({
+    ...base(kind, tone, stability, turbine, headline),
+    arrival: { atMs: lastT + delayMs, flow: lastY },
+  })
 
   const delayMs = c.propagationMin * MINUTE_MS
   const knownUntil = lastT + delayMs
-  const trend = computeTrend(points, flowFlatThreshold(lastY))
-  const slopePerHour = trend.dir === 'flat' ? 0 : trend.ratePerHour
+  const analysis = analyzeSeries(points, flowAnalyzeOptions(lastY))
 
   /** Debit a la turbine a l'instant `t` : mesure decalee du delai, puis tendance extrapolee. */
   const flowAt = (t: number): number =>
     t <= knownUntil
       ? valueAt(points, times, t - delayMs)
-      : Math.max(0, lastY + (slopePerHour * (t - knownUntil)) / HOUR_MS)
+      : projectSeries(analysis, lastY, (t - knownUntil) / HOUR_MS)
 
   const sourceAt = (t: number): OutlookSource => (t <= knownUntil ? 'observed' : 'estimated')
   const q = flowAt(nowMs)
@@ -180,6 +199,36 @@ export function outlookForState(
         detail: `${here} · ${
           low ? `passage sous le débit minimal (${fmtQ(c.minFlow)} m³/s)` : `dépassement du débit maximum (${fmtQ(c.maxFlow)} m³/s)`
         } · ${how(stop.source)}.`,
+      }
+    }
+
+    // Objectif de production : rester dans la zone optimale. Un franchissement proche est plus utile que la marge restante.
+    const inOptimal = (v: number) => v >= c.optMin && v <= c.optMax
+    const timing = (hit: Hit, noun: string) =>
+      hit.source === 'observed'
+        ? `${noun} prévue dans ${fmtDuration(hit.minutes)}`
+        : `${noun} probable dans ~${fmtDuration(hit.minutes)}`
+    if (inOptimal(q)) {
+      const exit = firstHit((v) => !inOptimal(v))
+      if (exit) {
+        const edge = flowAt(nowMs + exit.minutes * MINUTE_MS) < c.optMin ? c.optMin : c.optMax
+        return {
+          ...mk('opt-exit-expected', 'warn', 'changing', timing(exit, 'Sortie de zone optimale')),
+          inMinutes: exit.minutes,
+          source: exit.source,
+          detail: `${here} · sortie de la zone optimale (${fmtQ(edge)} m³/s) · ${how(exit.source)}.`,
+        }
+      }
+    } else {
+      const entry = firstHit(inOptimal)
+      if (entry) {
+        const edge = q < c.optMin ? c.optMin : c.optMax
+        return {
+          ...mk('opt-entry-expected', 'ok', 'changing', timing(entry, 'Zone optimale')),
+          inMinutes: entry.minutes,
+          source: entry.source,
+          detail: `${here} · entrée dans la zone optimale (${fmtQ(edge)} m³/s) · ${how(entry.source)}.`,
+        }
       }
     }
 
@@ -257,5 +306,15 @@ function base(
   turbine: TurbineState | null,
   headline: string,
 ): TurbineOutlook {
-  return { kind, tone, stability, turbine, inMinutes: null, source: null, headline, detail: null }
+  return {
+    kind,
+    tone,
+    stability,
+    turbine,
+    arrival: null,
+    inMinutes: null,
+    source: null,
+    headline,
+    detail: null,
+  }
 }

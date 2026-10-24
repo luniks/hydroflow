@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { TEST_EXPLOIT } from '@/test/exploitFixture'
+import { LAVAUR_3H } from '@/test/realSeries'
 import { EXPLOIT_DEFAULTS } from './constants'
 import { inferTurbineState, outlookForState, turbineOutlook } from './turbineOutlook'
 import type { ExploitConfig, SeriesPoint } from './types'
@@ -272,9 +273,80 @@ describe('turbineOutlook · valeurs par défaut du site', () => {
   })
 
   it('annonce un démarrage quand le débit atteint 30 m³/s', () => {
-    // 22 → 40 m³/s en 30 min : le seuil de démarrage (30) est franchi à 13,3 min, soit à la 14e minute.
+    // 22 → 40 m³/s en 80 min : le seuil de démarrage (80), est franchi à 1 h 04.
     const o = turbineOutlook(pts([30, 22], [0, 40]), EXPLOIT_DEFAULTS, NOW)
     expect(o).toMatchObject({ kind: 'start-expected', source: 'observed', turbine: 'stop' })
-    expect(o.headline).toBe('Démarrage prévu dans 14 min')
+    expect(o.headline).toBe('Démarrage prévu dans 1 h 04')
+  })
+})
+
+describe('turbineOutlook · zone optimale', () => {
+  const upTo = (hhmm: string) => LAVAUR_3H.filter((p) => Date.parse(p.t) <= Date.parse(`2026-10-21T${hhmm}:00Z`))
+  const at = (hhmm: string) => Date.parse(`2026-10-21T${hhmm}:00Z`)
+  const noDelay = { ...EXPLOIT_DEFAULTS, propagationMin: 0 }
+
+  it('annonce la sortie de zone à partir de mesures déjà faites en amont (délai de 80 min)', () => {
+    // le débit passe sous 45 m³/s à 14:45:37 à la station, donc à 16:05:37 à la turbine ; il est 15:00
+    const o = turbineOutlook(upTo('15:00'), EXPLOIT_DEFAULTS, at('15:00'))
+    expect(o).toMatchObject({ kind: 'opt-exit-expected', tone: 'warn', source: 'observed', turbine: 'run' })
+    expect(o.headline).toBe('Sortie de zone optimale prévue dans 1 h 06')
+    expect(o.detail).toContain('sortie de la zone optimale (45 m³/s)')
+    expect(o.detail).toContain('déjà mesuré en amont')
+  })
+
+  it('annonce l’entrée en zone optimale', () => {
+    // 42,8 m³/s à la turbine ; le débit mesuré à 13:33:30 (45 m³/s) y arrive à 14:53:30
+    const o = turbineOutlook(upTo('14:45'), EXPLOIT_DEFAULTS, at('14:45'))
+    expect(o).toMatchObject({ kind: 'opt-entry-expected', tone: 'ok', source: 'observed' })
+    expect(o.headline).toBe('Zone optimale prévue dans 9 min')
+    expect(o.detail).toContain('entrée dans la zone optimale (45 m³/s)')
+  })
+
+  it('estime la sortie de zone d’une courbe qui accélère quand elle n’est pas encore mesurée', () => {
+    // sans délai, la sortie (14:45:37) n'est pas encore connue à 14:30 : on extrapole avec la courbure
+    const o = turbineOutlook(upTo('14:30'), noDelay, at('14:30'))
+    expect(o).toMatchObject({ kind: 'opt-exit-expected', source: 'estimated' })
+    expect(o.inMinutes).toBeGreaterThanOrEqual(11)
+    expect(o.inMinutes).toBeLessThanOrEqual(20) // réel : 16 min
+    expect(o.headline).toMatch(/^Sortie de zone optimale probable dans ~/)
+  })
+
+  it('anticipe la chute finale bien avant l’ancienne pente sur 1 h', () => {
+    const o = turbineOutlook(LAVAUR_3H, noDelay, at('16:20'))
+    expect(o).toMatchObject({ kind: 'stop-expected', source: 'estimated' })
+    expect(o.inMinutes).toBeGreaterThanOrEqual(8)
+    expect(o.inMinutes).toBeLessThanOrEqual(25) // l'ancienne pente sur 1 h donnait ~1 h 24
+  })
+
+  it('annonce un arrêt estimé avec le délai de 80 min, au-delà du débit déjà mesuré', () => {
+    const o = turbineOutlook(LAVAUR_3H, EXPLOIT_DEFAULTS, at('16:20'))
+    expect(o.kind).toBe('stop-expected')
+    expect(o.source).toBe('estimated')
+    expect(o.inMinutes).toBeGreaterThan(80)
+    expect(o.inMinutes).toBeLessThanOrEqual(120)
+  })
+
+  it('sortie par le haut de la zone optimale', () => {
+    // 17 m³/s en hausse de 2 m³/s/h : 19 m³/s (inclus) est atteint a 60 min, la zone est quittee a la 61e minute
+    const o = outlookForState(pts([60, 15], [0, 17]), { ...TEST_EXPLOIT, propagationMin: 0 }, 'run', NOW)
+    expect(o).toMatchObject({ kind: 'opt-exit-expected', source: 'estimated' })
+    expect(o.headline).toBe('Sortie de zone optimale probable dans ~1 h 01')
+    expect(o.detail).toContain('sortie de la zone optimale (19 m³/s)')
+  })
+
+  it('entrée par le haut : le débit redescend vers la zone optimale', () => {
+    const o = outlookForState(pts([30, 22], [0, 21]), { ...TEST_EXPLOIT, propagationMin: 0 }, 'run', NOW)
+    expect(o).toMatchObject({ kind: 'opt-entry-expected', source: 'estimated' })
+    expect(o.detail).toContain('entrée dans la zone optimale (19 m³/s)')
+    expect(o.headline).toMatch(/^Zone optimale probable dans ~/)
+  })
+
+  it('un arrêt proche prime sur la sortie de zone', () => {
+    const o = outlookForState(pts([30, 9], [0, 4]), TEST_EXPLOIT, 'run', NOW)
+    expect(o.kind).toBe('stop-expected')
+  })
+
+  it('ne propose pas d’événement de zone optimale à l’arrêt', () => {
+    expect(outlookForState(flat(14), TEST_EXPLOIT, 'stop', NOW).kind).toBe('start-now')
   })
 })

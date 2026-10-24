@@ -5,8 +5,13 @@ import {
   nearestPointIndex,
   rainBarOpacity,
   rainBarsGeometry,
+  SPARKLINE_PAD_LEFT,
+  SPARKLINE_PAD_RIGHT,
+  SPARKLINE_TICK_COUNT,
   sparklineGeometry,
   tooltipAlignment,
+  X_TITLE_SPACE,
+  Y_TITLE_SPACE,
 } from './chartScale'
 import type { SeriesPoint } from './types'
 
@@ -65,6 +70,13 @@ describe('sparklineGeometry', () => {
     })!
     expect(geo.height).toBe(92)
     expect(geo.plotBottom).toBe(82)
+  })
+
+  it('réserve de la place aux titres des axes', () => {
+    const plain = sparklineGeometry(points, { windowStart: start, windowEnd: end })!
+    const titled = sparklineGeometry(points, { windowStart: start, windowEnd: end, withTitles: true })!
+    expect(titled.padLeft).toBe(plain.padLeft + Y_TITLE_SPACE)
+    expect(titled.plotBottom).toBe(plain.plotBottom - X_TITLE_SPACE)
   })
 
   it('accepte une largeur et une hauteur explicites', () => {
@@ -217,6 +229,56 @@ describe('rainBarsGeometry', () => {
       nowMs: windowEndMs + HOUR,
     })!
     expect(outside.nowX).toBeNull()
+  })
+
+  describe('avec axes', () => {
+    const base = { windowStartMs, windowEndMs, nowMs, withAxes: true }
+
+    it('sans axes, aucun repère et des marges réduites', () => {
+      const geo = rainBarsGeometry(rain, { windowStartMs, windowEndMs, nowMs })!
+      expect(geo.xTicks).toEqual([])
+      expect(geo.yTicks).toEqual([])
+      expect([geo.padLeft, geo.padRight, geo.plotBottom]).toEqual([4, 4, 84])
+    })
+
+    it('réserve la place des graduations', () => {
+      const geo = rainBarsGeometry(rain, base)!
+      expect([geo.padLeft, geo.padRight, geo.plotBottom]).toEqual([SPARKLINE_PAD_LEFT, SPARKLINE_PAD_RIGHT, 64])
+    })
+
+    it('réserve en plus la place des titres d’axes', () => {
+      const geo = rainBarsGeometry(rain, { ...base, withTitles: true })!
+      expect(geo.padLeft).toBe(SPARKLINE_PAD_LEFT + Y_TITLE_SPACE)
+      expect(geo.plotBottom).toBe(64 - X_TITLE_SPACE)
+    })
+
+    it('répartit cinq repères horaires sur toute la largeur de tracé', () => {
+      const geo = rainBarsGeometry(rain, base)!
+      const plotWidth = geo.width - geo.padLeft - geo.padRight
+      expect(geo.xTicks).toHaveLength(SPARKLINE_TICK_COUNT)
+      expect(geo.xTicks[0]!.position).toBe(geo.padLeft)
+      expect(geo.xTicks[4]!.position).toBeCloseTo(geo.padLeft + plotWidth, 8)
+      expect(geo.xTicks[2]!.position).toBeCloseTo(geo.padLeft + plotWidth / 2, 8)
+      expect(geo.xTicks[0]!.label).toBe(formatAxisTick(windowStartMs, 4))
+      expect(geo.xTicks[4]!.label).toBe(formatAxisTick(windowEndMs, 4))
+    })
+
+    it('graduation verticale à 0, 50 % et 100 % de l’échelle (plancher de 4 mm)', () => {
+      const geo = rainBarsGeometry(rain, base)!
+      expect(geo.max).toBe(10)
+      expect(geo.yTicks.map((t) => t.label)).toEqual(['0', '5', '10'])
+      expect(geo.yTicks[0]!.position).toBe(geo.plotBottom)
+      expect(geo.yTicks[2]!.position).toBe(geo.plotTop)
+      expect(geo.yTicks[1]!.position).toBeCloseTo((geo.plotTop + geo.plotBottom) / 2, 8)
+    })
+
+    it('arrondit les graduations à une décimale', () => {
+      const light: SeriesPoint[] = [
+        { t: '2026-10-01T00:00:00Z', y: 0.3 },
+        { t: '2026-10-01T01:00:00Z', y: 0.1 },
+      ]
+      expect(rainBarsGeometry(light, base)!.yTicks.map((t) => t.label)).toEqual(['0', '2', '4'])
+    })
   })
 
   it('accepte des dimensions explicites et protège la fenêtre nulle', () => {
