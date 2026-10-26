@@ -1,4 +1,4 @@
-import type { AnalyzeOptions, ExploitConfig, RainPointDef, Range, Station, Thresholds } from './types'
+import type { AnalyzeOptions, ExploitConfig, RainPointDef, Range, Station, Thresholds, TurbineModel } from './types'
 
 export const DEFAULT_THRESHOLDS: Thresholds = {
   level: { low: 0.5, high: 2.5 },
@@ -63,6 +63,35 @@ export const EXPLOIT_DEFAULTS: ExploitConfig = {
   propagationMin: 80,
 }
 
+/**
+ * Modele de la turbine VLH de St-Jean-de-Rive. Valeurs issues de la fiche de la turbine, des releves
+ * d'exploitation et du calage sur un mois de mesures (Hub'Eau) : voir turbineModel.ts.
+ */
+export const DEFAULT_TURBINE_MODEL: TurbineModel = {
+  refCode: 'O469251003',
+  downCode: 'O480252002',
+  reserveFlow: 5.5,
+  maxTurbineFlow: 23.5,
+  startRatio: 0.3,
+  stopRatio: 0.3,
+  ratedPowerKw: 450,
+  reducedPowerKw: 150,
+  reducedMin: 0,
+  efficiency: 0.65,
+  headMin: 1.5,
+  headMax: 3.5,
+  poolLowCm: -30,
+  tailLowCm: -380,
+  tailRefLevel: 0.05,
+  headCorrection: 0,
+  tailRating: { a: 0.0083, b: 1.2035 },
+  lag: { refMin: 91, refFlow: 20, exponent: 0.5, maxMin: 180 },
+  downLagRatio: 17.73 / 15.35,
+  defaultGain: 0.572,
+  defaultOffset: -1.3,
+  optimalShare: 0.8,
+}
+
 /** Horizon de la prevision d'exploitation (min) : au-dela, la tendance extrapolee n'est plus fiable. */
 export const OUTLOOK_HORIZON_MIN = 120
 
@@ -123,6 +152,7 @@ export const AUTO_REFRESH_OPTIONS = [0, 5, 10, 30] as const
 export const STORAGE_KEYS = {
   stations: 'custom_stations_v2',
   exploit: 'exploitation_config_v1',
+  turbineModel: 'turbine_model_v1',
   exploitCollapsed: 'exploitation_collapsed',
   rainHidden: 'rain_hidden_v1',
   rainExternal: 'rain_external_v1',

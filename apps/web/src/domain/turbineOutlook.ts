@@ -20,7 +20,7 @@ const MINUTE_MS = 60_000
 const HOUR_MS = 3_600_000
 
 /** Valeur de la serie a l'instant `t` (interpolation lineaire, bornee aux extremites). */
-function valueAt(points: SeriesPoint[], times: number[], t: number): number {
+export function valueAt(points: SeriesPoint[], times: number[], t: number): number {
   const last = points.length - 1
   if (t <= times[0]!) return points[0]!.y
   if (t >= times[last]!) return points[last]!.y
@@ -142,7 +142,7 @@ export function outlookForState(
 
   const sourceAt = (t: number): OutlookSource => (t <= knownUntil ? 'observed' : 'estimated')
   const q = flowAt(nowMs)
-  const watchMargin = OUTLOOK_WATCH_RATIO * (c.maxFlow - c.minFlow)
+  const watchMargin = c.watchMargin ?? OUTLOOK_WATCH_RATIO * (c.maxFlow - c.minFlow)
   const horizon = fmtDuration(OUTLOOK_HORIZON_MIN)
   const here = `Débit à la turbine ≈ ${fmtQ(q)} m³/s`
 
