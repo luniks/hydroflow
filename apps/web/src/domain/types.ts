@@ -287,6 +287,8 @@ export interface TurbineForecast {
   siteFlow: number | null
   powerKw: number | null
   steps: ForecastStep[]
+  /** Debit au barrage, a l'heure ou il y arrive (serie de la station de reference convertie et decalee). */
+  siteSeries: SeriesPoint[]
   /** Energie attendue sur l'horizon (kWh). */
   energyKwh: number
   /** Probabilite de marche a +30, +60 et +120 min. */
