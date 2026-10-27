@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_TURBINE_MODEL as M } from './constants'
 import { validateExploit } from './exploitation'
 import {
+  efficiencyAt,
   exploitConfigFromModel,
   grossHead,
   headAtLowFlow,
@@ -73,6 +74,25 @@ describe('turbineModel · puissance', () => {
   })
 })
 
+describe('turbineModel · rendement', () => {
+  it('interpole la courbe selon la charge et reste constant au-delà des extrémités', () => {
+    expect(efficiencyAt(0.1, M)).toBe(0.5)
+    expect(efficiencyAt(0.3, M)).toBeCloseTo(0.5, 6)
+    expect(efficiencyAt(0.41, M)).toBeCloseTo(0.65, 6)
+    expect(efficiencyAt(0.355, M)).toBeCloseTo(0.575, 6)
+    expect(efficiencyAt(1, M)).toBeCloseTo(0.66, 6)
+  })
+
+  it('utilise le rendement constant sans courbe', () => {
+    expect(efficiencyAt(0.5, { ...M, efficiencyCurve: [], efficiency: 0.7 })).toBe(0.7)
+  })
+
+  it('donne ~110 kW au démarrage (30 % de charge), comme l’exploitation', () => {
+    expect(powerKw(startFlowOf(M), M)).toBeGreaterThan(100)
+    expect(powerKw(startFlowOf(M), M)).toBeLessThan(125)
+  })
+})
+
 describe('turbineModel · zone optimale', () => {
   it('est déduite : au moins 80 % de la puissance nominale', () => {
     const opt = optimalRange(M)!
@@ -83,7 +103,7 @@ describe('turbineModel · zone optimale', () => {
   })
 
   it('n’existe pas si le rendement ne permet jamais d’atteindre le seuil', () => {
-    expect(optimalRange({ ...M, efficiency: 0.1 })).toBeNull()
+    expect(optimalRange({ ...M, efficiencyCurve: [], efficiency: 0.1 })).toBeNull()
   })
 
   it('produit une configuration d’exploitation valide, sans délai (série déjà décalée)', () => {
@@ -98,6 +118,12 @@ describe('normTurbineModel', () => {
   it('rejette ce qui n’est pas un objet', () => {
     expect(normTurbineModel(null, M)).toBeNull()
     expect(normTurbineModel('x', M)).toBeNull()
+  })
+
+  it('rejette une courbe de rendement invalide ou non croissante', () => {
+    expect(normTurbineModel({ efficiencyCurve: [[0.5, 0.6], [0.4, 0.7]] }, M)!.efficiencyCurve).toEqual(M.efficiencyCurve)
+    expect(normTurbineModel({ efficiencyCurve: 'x' }, M)!.efficiencyCurve).toEqual(M.efficiencyCurve)
+    expect(normTurbineModel({ efficiencyCurve: [[0.2, 0.4], [1, 0.7]] }, M)!.efficiencyCurve).toEqual([[0.2, 0.4], [1, 0.7]])
   })
 
   it('complète les valeurs manquantes ou invalides avec la configuration par défaut', () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_TURBINE_MODEL as M } from './constants'
-import { normalCdf, probabilityIn, turbineForecast } from './turbineForecast'
+import { normalCdf, probabilityIn, runningMin, turbineForecast } from './turbineForecast'
+import { powerKw } from './turbineModel'
 import type { SeriesPoint } from './types'
 
 const NOW = Date.parse('2026-10-26T12:00:00Z')
@@ -73,6 +74,67 @@ describe('turbineForecast · débit stable', () => {
   })
 })
 
+describe('turbineForecast · montée et descente progressives', () => {
+  const rise = (minAgo: number): number => (minAgo > 30 ? 15 : minAgo < 10 ? 40 : 15 + (25 * (30 - minAgo)) / 20)
+
+  it('la puissance ne varie jamais plus vite que la vitesse de rampe', () => {
+    const f = turbineForecast(series(4, rise), [], M, NOW)
+    const maxDelta = M.rampKwPerMin * 5
+    for (let i = 1; i < f.steps.length; i++) {
+      expect(Math.abs(f.steps[i]!.powerKw - f.steps[i - 1]!.powerKw)).toBeLessThanOrEqual(maxDelta + 1e-9)
+    }
+  })
+
+  it('sans vitesse de rampe, la puissance saute directement à sa valeur', () => {
+    const free = turbineForecast(series(4, rise), [], { ...M, rampKwPerMin: 0 }, NOW)
+    const jumps = free.steps.map((s, i) => (i ? Math.abs(s.powerKw - free.steps[i - 1]!.powerKw) : 0))
+    expect(Math.max(...jumps)).toBeGreaterThan(M.rampKwPerMin * 5)
+  })
+
+  it('une turbine démarrée depuis peu n’a pas encore atteint sa puissance finale', () => {
+    // Le front vient d’arriver au barrage (il rattrape les eaux plus lentes qui le précèdent) : la turbine tourne, mais monte encore.
+    const f = turbineForecast(series(4, (a) => (a > 150 ? 15 : 40)), [], M, NOW)
+    expect(f.outlook.turbine).toBe('run')
+    expect(f.powerKw!).toBeLessThan(powerKw(M.defaultGain * 40 + M.defaultOffset, M))
+  })
+})
+
+describe('runningMin', () => {
+  const pt = (minAgo: number, y: number): SeriesPoint => ({ t: new Date(NOW - minAgo * MIN).toISOString(), y })
+
+  it('compte depuis quand le débit est au-dessus du seuil d’arrêt', () => {
+    expect(runningMin([pt(60, 5), pt(40, 15), pt(20, 16), pt(0, 17)], NOW, 12.55)).toBe(40)
+  })
+
+  it('repart de zéro après une interruption', () => {
+    expect(runningMin([pt(60, 15), pt(40, 5), pt(20, 15), pt(0, 15)], NOW, 12.55)).toBe(20)
+  })
+
+  it('vaut 0 sous le seuil, ou sans mesure', () => {
+    expect(runningMin([pt(10, 5), pt(0, 6)], NOW, 12.55)).toBe(0)
+    expect(runningMin([], NOW, 12.55)).toBe(0)
+  })
+})
+
+describe('turbineForecast · inertie de la retenue', () => {
+  // Débit amont bas pendant `lowMin` minutes au milieu de la série, sinon élevé.
+  const dip = (lowMin: number) => (a: number): number => (a > 140 || a < 140 - lowMin ? 40 : 15)
+
+  it('un creux court ne coupe pas la turbine', () => {
+    const f = turbineForecast(series(4, dip(15)), [], M, NOW)
+    expect(f.steps.every((s) => s.turbine === 'run')).toBe(true)
+  })
+
+  it('un creux long finit par couper la turbine, avec un délai', () => {
+    const none = turbineForecast(series(4, dip(70)), [], { ...M, stopHoldMin: 0 }, NOW)
+    const held = turbineForecast(series(4, dip(70)), [], { ...M, stopHoldMin: 20 }, NOW)
+    const firstStop = (f: typeof none) => f.steps.find((s) => s.turbine === 'stop')?.minute
+    expect(firstStop(none)).toBeDefined()
+    expect(firstStop(held)).toBeDefined()
+    expect(firstStop(held)!).toBeGreaterThan(firstStop(none)!)
+  })
+})
+
 describe('turbineForecast · éclusée', () => {
   // Débit amont bas (15 m³/s) qui monte à 40 m³/s entre il y a 30 et il y a 10 minutes : le front arrive à la turbine dans ~1 h.
   const rise = (minAgo: number): number => (minAgo > 30 ? 15 : minAgo < 10 ? 40 : 15 + (25 * (30 - minAgo)) / 20)
@@ -83,10 +145,10 @@ describe('turbineForecast · éclusée', () => {
     expect(f.outlook.kind).toBe('start-expected')
     expect(f.outlook.source).toBe('observed')
     expect(f.outlook.inMinutes!).toBeGreaterThan(30)
-    expect(f.outlook.inMinutes!).toBeLessThan(90)
+    expect(f.outlook.inMinutes!).toBeLessThan(120)
     expect(f.powerKw).toBe(0)
     expect(f.steps.at(-1)!.turbine).toBe('run')
-    expect(f.steps.at(-1)!.powerKw).toBeGreaterThan(100)
+    expect(f.steps.at(-1)!.powerKw).toBeGreaterThan(50)
     expect(f.energyKwh).toBeGreaterThan(0)
     expect(f.pRun!.m120).toBeGreaterThan(f.pRun!.m30)
   })
@@ -105,9 +167,11 @@ describe('turbineForecast · éclusée', () => {
     const f = turbineForecast(series(4, fall), [], M, NOW)
     expect(f.outlook.turbine).toBe('run')
     expect(f.outlook.kind).toBe('stop-expected')
-    const after = f.steps.find((s) => s.minute === 90)!
+    const after = f.steps.find((s) => s.minute === 105)!
     expect(after.turbine).toBe('stop')
-    expect(after.powerKw).toBe(0)
+    // La puissance redescend progressivement au lieu de tomber à zéro.
+    expect(after.powerKw).toBeGreaterThan(0)
+    expect(f.steps.at(-1)!.powerKw).toBe(0)
   })
 
   it('le régime réduit prolonge la production après la baisse sous le seuil', () => {

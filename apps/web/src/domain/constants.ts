@@ -77,7 +77,15 @@ export const DEFAULT_TURBINE_MODEL: TurbineModel = {
   ratedPowerKw: 450,
   reducedPowerKw: 150,
   reducedMin: 0,
+  stopHoldMin: 20,
+  rampKwPerMin: 6,
   efficiency: 0.65,
+  // Caler avec l'historique de production : ~0,5 au demarrage (100-115 kW observes a 30 % de charge), ~0,65 a 40 % (200 kW).
+  efficiencyCurve: [
+    [0.3, 0.5],
+    [0.41, 0.65],
+    [1, 0.66],
+  ],
   headMin: 1.5,
   headMax: 3.5,
   poolLowCm: -30,
@@ -85,10 +93,12 @@ export const DEFAULT_TURBINE_MODEL: TurbineModel = {
   tailRefLevel: 0.05,
   headCorrection: 0,
   tailRating: { a: 0.0083, b: 1.2035 },
-  lag: { refMin: 91, refFlow: 20, exponent: 0.5, maxMin: 180 },
+  lag: { refMin: 90, refFlow: 30, exponent: 0.5, maxMin: 150 },
   downLagRatio: 17.73 / 15.35,
-  defaultGain: 0.572,
+  defaultGain: 0.6,
   defaultOffset: -1.3,
+  fitGain: false,
+  calibrationWeight: 0.5,
   optimalShare: 0.8,
 }
 
@@ -152,7 +162,7 @@ export const AUTO_REFRESH_OPTIONS = [0, 5, 10, 30] as const
 export const STORAGE_KEYS = {
   stations: 'custom_stations_v2',
   exploit: 'exploitation_config_v1',
-  turbineModel: 'turbine_model_v1',
+  turbineModel: 'turbine_model_v2',
   exploitCollapsed: 'exploitation_collapsed',
   rainHidden: 'rain_hidden_v1',
   rainExternal: 'rain_external_v1',

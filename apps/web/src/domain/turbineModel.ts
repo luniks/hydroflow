@@ -42,9 +42,22 @@ export function maxSiteFlow(m: TurbineModel): number {
   return lo
 }
 
+/** Rendement global pour une charge `ratio` (debit turbine / capacite max) : interpolation de la courbe, ou rendement constant. */
+export function efficiencyAt(ratio: number, m: TurbineModel): number {
+  const c = m.efficiencyCurve
+  if (!c.length) return m.efficiency
+  if (ratio <= c[0]![0]) return c[0]![1]
+  for (let i = 1; i < c.length; i++) {
+    const [x1, y1] = c[i]!
+    const [x0, y0] = c[i - 1]!
+    if (ratio <= x1) return y0 + ((ratio - x0) / (x1 - x0)) * (y1 - y0)
+  }
+  return c[c.length - 1]![1]
+}
+
 /**
  * Puissance electrique (kW) en marche pour un debit `q` au barrage :
- * P = 9,81 * rendement * Q_turbine * H, plafonnee a la puissance nominale, nulle sous le debit d'arret ou si la
+ * P = 9,81 * rendement(charge) * Q_turbine * H, plafonnee a la puissance nominale, nulle sous le debit d'arret ou si la
  * chute passe sous le minimum.
  */
 export function powerKw(q: number, m: TurbineModel): number {
@@ -52,7 +65,7 @@ export function powerKw(q: number, m: TurbineModel): number {
   const head = grossHead(q, m)
   if (head < m.headMin) return 0
   const qt = turbinedFlow(q, m)
-  return Math.min(m.ratedPowerKw, KW_PER_M3S_M * m.efficiency * qt * head)
+  return Math.min(m.ratedPowerKw, KW_PER_M3S_M * efficiencyAt(qt / m.maxTurbineFlow, m) * qt * head)
 }
 
 /**
@@ -107,7 +120,13 @@ export function normTurbineModel(raw: unknown, fallback: TurbineModel): TurbineM
     const f = fallback[key]
     if (typeof f === 'number') out[key] = Number.isFinite(v) ? v : f
     else if (typeof f === 'string') out[key] = typeof v === 'string' && v ? v : f
-    else if (f && typeof f === 'object' && v && typeof v === 'object') {
+    else if (Array.isArray(f)) {
+      const ok =
+        Array.isArray(v) &&
+        v.every((p) => Array.isArray(p) && p.length === 2 && p.every((x) => Number.isFinite(x))) &&
+        v.every((p, i) => i === 0 || (p as number[])[0]! > (v[i - 1] as number[])[0]!)
+      out[key] = ok ? v : f
+    } else if (f && typeof f === 'object' && v && typeof v === 'object') {
       out[key] = { ...(f as object), ...(v as object) }
     }
   }

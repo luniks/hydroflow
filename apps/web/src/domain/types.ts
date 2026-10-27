@@ -231,8 +231,14 @@ export interface TurbineModel {
   /** Puissance en regime reduit (niveau amont redescendu a 0 cm) et duree (min) de ce regime avant l'arret. */
   reducedPowerKw: number
   reducedMin: number
+  /** Duree (min) pendant laquelle la retenue permet a la turbine de traverser un creux de debit sous le seuil d'arret avant de s'arreter. */
+  stopHoldMin: number
+  /** Vitesse de montee et de descente de la puissance (kW/min) au demarrage et a l'arret : la turbine suit le niveau amont, elle ne saute pas a sa puissance finale. */
+  rampKwPerMin: number
   /** Rendement global (turbine + generateur) moyen. A caler avec l'historique de production. */
   efficiency: number
+  /** Rendement selon la charge : points [Q_turbine / capacite max ; rendement], croissants. Vide : `efficiency` constant. */
+  efficiencyCurve: [number, number][]
   /** Chute brute de fonctionnement (m) : en dehors, arret. */
   headMin: number
   headMax: number
@@ -250,6 +256,10 @@ export interface TurbineModel {
   /** Passage debit station de reference -> debit au barrage : gain * q + offset (les travaux amont doublent le debit). */
   defaultGain: number
   defaultOffset: number
+  /** `true` : le calage ajuste aussi le gain ; sinon seul le decalage suit la station aval (gain fixe = `defaultGain`). */
+  fitGain: boolean
+  /** Poids (0-1) du calage sur la station aval : 0 = valeurs par defaut seules, 1 = calage seul. Le calage est bruite (aval douteux, travaux). */
+  calibrationWeight: number
   /** Part de la puissance nominale au-dessus de laquelle on est en zone optimale. */
   optimalShare: number
 }

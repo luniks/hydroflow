@@ -1,5 +1,5 @@
 import { flowAnalyzeOptions, OUTLOOK_HORIZON_MIN } from './constants'
-import { calibrateSite, siteFlowSeries } from './siteFlow'
+import { calibrateSite, rideThrough, siteFlowSeries } from './siteFlow'
 import { exploitConfigFromModel, grossHead, powerKw, startFlowOf, stopFlowOf } from './turbineModel'
 import { turbineOutlook, valueAt } from './turbineOutlook'
 import { analyzeSeries, projectSeries } from './trend'
@@ -72,7 +72,7 @@ export function turbineForecast(
   nowMs: number,
 ): TurbineForecast {
   const calibration = calibrateSite(ref, down, m, nowMs)
-  const site = siteFlowSeries(ref, calibration, m)
+  const site = rideThrough(siteFlowSeries(ref, calibration, m), stopFlowOf(m), m.stopHoldMin)
   // La marge de surveillance suit l'incertitude du calage : la plage [minimal ; maximum] est ici tres large (crue).
   const cfg = exploitConfigFromModel(m, Math.max(MIN_WATCH_MARGIN, calibration.sigma))
   const outlook = turbineOutlook(site, cfg, nowMs)
@@ -103,6 +103,10 @@ export function turbineForecast(
   let state: TurbineState = outlook.turbine
   let reducedLeft = 0
   let energy = 0
+  // La turbine suit le niveau amont : elle monte et descend progressivement. On part de ce que la montee
+  // en cours permet d'avoir atteint depuis le demarrage, puis la puissance suit la cible a vitesse limitee.
+  const maxDelta = m.rampKwPerMin > 0 ? m.rampKwPerMin * FORECAST_STEP_MIN : Infinity
+  let power = 0
 
   for (let minute = 0; minute <= OUTLOOK_HORIZON_MIN; minute += FORECAST_STEP_MIN) {
     const atMs = nowMs + minute * MINUTE_MS
@@ -119,12 +123,17 @@ export function turbineForecast(
 
     const threshold = state === 'run' ? stop : start
     const pRun = probabilityIn(flow, sigma, threshold, cfg.maxFlow)
-    let power = state === 'run' ? powerKw(flow, m) : 0
+    let target = state === 'run' ? powerKw(flow, m) : 0
     if (state === 'stop' && reducedLeft > 0) {
-      power = m.reducedPowerKw
+      target = m.reducedPowerKw
       reducedLeft -= FORECAST_STEP_MIN
     }
-    if (minute > 0) energy += (power * FORECAST_STEP_MIN) / 60
+    if (minute === 0) {
+      power = state === 'run' ? Math.min(target, m.rampKwPerMin > 0 ? m.rampKwPerMin * runningMin(site, nowMs, stop) : target) : 0
+    } else {
+      power += Math.max(-maxDelta, Math.min(maxDelta, target - power))
+      energy += (power * FORECAST_STEP_MIN) / 60
+    }
     steps.push({ minute, atMs, flow, sigma, source: atMs <= knownUntil ? 'observed' : 'estimated', turbine: state, pRun, powerKw: power })
   }
 
@@ -140,4 +149,20 @@ export function turbineForecast(
     pRun: { m30: at(30), m60: at(60), m120: at(120) },
     confidence: confidenceOf(steps, calibration),
   }
+}
+
+/**
+ * Duree (min) pendant laquelle le debit au barrage est reste au-dessus du debit d'arret jusqu'a `nowMs`,
+ * c'est-a-dire depuis combien de temps la turbine tourne si elle tourne.
+ */
+export function runningMin(site: SeriesPoint[], nowMs: number, stopFlow: number): number {
+  let startMs: number | null = null
+  for (let i = site.length - 1; i >= 0; i--) {
+    const p = site[i]!
+    const t = Date.parse(p.t)
+    if (t > nowMs) continue
+    if (p.y < stopFlow) break
+    startMs = t
+  }
+  return startMs === null ? 0 : Math.max(0, (nowMs - startMs) / MINUTE_MS)
 }

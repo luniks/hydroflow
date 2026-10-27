@@ -13,7 +13,13 @@ export const CALIBRATION_MIN_PAIRS = 24
 const MIN_GAIN_SPREAD = 2
 const DEFAULT_SIGMA = 2.5
 const MIN_SIGMA = 0.5
-const GAIN_BOUNDS = [0.2, 1.2] as const
+/** Bornes du gain : le rapport entre les deux stations varie (travaux, repartition des apports), pas de facon extreme. */
+const GAIN_BOUNDS = [0.35, 0.9] as const
+/**
+ * Duree (min) a partir de laquelle une valeur strictement identique est consideree figee (capteur bloque, valeur
+ * de remplacement) : sur un cours d'eau qui bouge, la meme valeur plus de 90 min est suspecte.
+ */
+export const FROZEN_MIN = 90
 
 /**
  * Delai de propagation (min) de la station de reference a la turbine pour un debit de reference `q` :
@@ -26,6 +32,23 @@ export function lagMinutes(q: number, law: LagLaw): number {
 }
 
 const toTimes = (points: SeriesPoint[]): number[] => points.map((p) => Date.parse(p.t))
+
+/**
+ * Ecarte les series de valeurs strictement identiques couvrant au moins `minMin` minutes (capteur fige).
+ * Une telle serie fausserait le calage : le debit aval parait ne plus suivre l'amont.
+ */
+export function dropFrozen(points: SeriesPoint[], minMin: number = FROZEN_MIN): SeriesPoint[] {
+  const out: SeriesPoint[] = []
+  let i = 0
+  while (i < points.length) {
+    let j = i
+    while (j + 1 < points.length && points[j + 1]!.y === points[i]!.y) j++
+    const span = (Date.parse(points[j]!.t) - Date.parse(points[i]!.t)) / MINUTE_MS
+    if (span < minMin) out.push(...points.slice(i, j + 1))
+    i = j + 1
+  }
+  return out
+}
 
 interface Pair {
   t: number
@@ -61,7 +84,7 @@ export function calibrateSite(
   m: TurbineModel,
   nowMs: number,
 ): SiteCalibration {
-  const pairs = pairUp(ref, down, m, nowMs)
+  const pairs = pairUp(ref, dropFrozen(down), m, nowMs)
   const fallback: SiteCalibration = {
     gain: m.defaultGain,
     offset: m.defaultOffset,
@@ -81,7 +104,7 @@ export function calibrateSite(
     sxy += (p.x - mx) * (p.y - my)
   }
   const spread = Math.sqrt(sxx / n)
-  let gain = spread >= MIN_GAIN_SPREAD ? sxy / sxx : m.defaultGain
+  let gain = m.fitGain && spread >= MIN_GAIN_SPREAD ? sxy / sxx : m.defaultGain
   gain = Math.min(GAIN_BOUNDS[1], Math.max(GAIN_BOUNDS[0], gain))
   let offset = my - gain * mx
 
@@ -90,6 +113,11 @@ export function calibrateSite(
     offset += recent.reduce((a, p) => a + (p.y - (gain * p.x + offset)), 0) / recent.length
   }
 
+  // Le calage est bruite : on ne le suit qu'en partie, le reste restant sur les valeurs par defaut.
+  const w = Math.min(1, Math.max(0, m.calibrationWeight))
+  gain = (1 - w) * m.defaultGain + w * gain
+  offset = (1 - w) * m.defaultOffset + w * offset
+
   const sse = pairs.reduce((a, p) => a + (p.y - (gain * p.x + offset)) ** 2, 0)
   const sigma = Math.max(MIN_SIGMA, Math.sqrt(sse / n))
   return { gain, offset, sigma, pairs: n, fitted: true }
@@ -97,17 +125,38 @@ export function calibrateSite(
 
 /**
  * Serie du debit au barrage, a l'heure ou il y arrive : chaque mesure de la station de reference est convertie
- * (gain, decalage) puis decalee de son propre delai de propagation. Les mesures dont l'arrivee ne suit pas celle de
- * la precedente (inversion due a un delai qui varie) sont ecartees : la serie reste strictement croissante en temps.
+ * (gain, decalage) puis decalee de son propre delai de propagation.
+ *
+ * Quand le delai diminue avec le debit, une montee rattrape les valeurs qui la precedent : la crue arrive d'un
+ * bloc, comme un front raide. Les arrivees sont alors ramenees a une minute apres la precedente, pour que la serie
+ * reste croissante en temps sans perdre la valeur la plus haute.
  */
 export function siteFlowSeries(ref: SeriesPoint[], cal: SiteCalibration, m: TurbineModel): SeriesPoint[] {
   const out: SeriesPoint[] = []
-  let lastArrival = -Infinity
+  let last = -Infinity
   for (const p of ref) {
-    const arrival = Date.parse(p.t) + lagMinutes(p.y, m.lag) * MINUTE_MS
-    if (!(arrival > lastArrival)) continue
-    lastArrival = arrival
+    const arrival = Math.max(Date.parse(p.t) + lagMinutes(p.y, m.lag) * MINUTE_MS, last + MINUTE_MS)
+    last = arrival
     out.push({ t: new Date(arrival).toISOString(), y: Math.max(0, cal.gain * p.y + cal.offset) })
   }
   return out
+}
+
+/**
+ * Tient compte de l'inertie de la retenue : un creux de debit sous `stopFlow` ne coupe la turbine qu'apres `holdMin`
+ * minutes (le niveau amont redescend d'abord vers son seuil). Pendant ce delai, le debit est releve au seuil d'arret ;
+ * un creux plus court est ainsi traverse sans arret, un creux plus long arrete la turbine `holdMin` minutes apres son debut.
+ */
+export function rideThrough(site: SeriesPoint[], stopFlow: number, holdMin: number): SeriesPoint[] {
+  if (!(holdMin > 0)) return site
+  let dipStart: number | null = null
+  return site.map((p) => {
+    const t = Date.parse(p.t)
+    if (p.y >= stopFlow) {
+      dipStart = null
+      return p
+    }
+    dipStart ??= t
+    return t - dipStart < holdMin * MINUTE_MS ? { t: p.t, y: stopFlow } : p
+  })
 }
