@@ -132,3 +132,13 @@ export function normTurbineModel(raw: unknown, fallback: TurbineModel): TurbineM
   }
   return out as unknown as TurbineModel
 }
+
+/** Copie profonde d'un modele (les reglages imbriques et la courbe de rendement ne sont pas partages). */
+export function cloneTurbineModel(m: TurbineModel): TurbineModel {
+  return {
+    ...m,
+    efficiencyCurve: m.efficiencyCurve.map(([load, eff]) => [load, eff] as [number, number]),
+    tailRating: { ...m.tailRating },
+    lag: { ...m.lag },
+  }
+}

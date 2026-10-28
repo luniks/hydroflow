@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_TURBINE_MODEL as M } from './constants'
 import { validateExploit } from './exploitation'
 import {
+  cloneTurbineModel,
   efficiencyAt,
   exploitConfigFromModel,
   grossHead,
@@ -131,5 +132,18 @@ describe('normTurbineModel', () => {
     expect(m.efficiency).toBe(0.7)
     expect(m.reserveFlow).toBe(M.reserveFlow)
     expect(m.lag).toEqual({ ...M.lag, refMin: 100 })
+  })
+})
+
+describe('cloneTurbineModel', () => {
+  it('ne partage aucun objet imbriqué avec l’original', () => {
+    const c = cloneTurbineModel(M)
+    expect(c).toEqual(M)
+    c.lag.refMin = 1
+    c.tailRating.a = 1
+    c.efficiencyCurve[0]![1] = 0.1
+    expect(M.lag.refMin).toBe(90)
+    expect(M.tailRating.a).toBe(0.0083)
+    expect(M.efficiencyCurve[0]![1]).toBe(0.5)
   })
 })

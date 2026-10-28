@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { GIROUSSENS, LAVAUR_3H, VIELMUR_NIVEAU } from '@/test/realSeries'
 import { EXPLOIT_DEFAULTS, flowAnalyzeOptions, LEVEL_ANALYZE_OPTIONS } from './constants'
 import { fmtTrend } from './format'
-import { exploitBands, stationBands, stationLine, TREND_STALE_MIN, type TrendBand } from './stationTrend'
+import { exploitBands, stationBands, stationLine, TREND_STALE_MIN, turbineBands, type TrendBand } from './stationTrend'
 import { analyzeSeries } from './trend'
 import type { SeriesAnalysis, SeriesPoint } from './types'
 
@@ -152,5 +152,23 @@ describe('stationLine · fraîcheur', () => {
   it('ne dit rien d’une mesure récente, ni quand l’âge n’a pas de sens', () => {
     expect(stationLine(flatAnalysis(30), 10, opts(bands, TREND_STALE_MIN)).text).toBe('▬ stable 30 min')
     expect(stationLine(flatAnalysis(30), 10, opts(bands, null)).text).toBe('▬ stable 30 min')
+  })
+})
+
+describe('turbineBands', () => {
+  const c = { refCode: 'X', minFlow: 20, startFlow: 30, maxFlow: 150, optMin: 45, optMax: 135, propagationMin: 90 }
+
+  it('donne l’arrêt, le démarrage et la crue, sans zone optimale', () => {
+    expect(turbineBands(c).map((b) => b.value)).toEqual([20, 30, 150])
+    expect(turbineBands(c).flatMap((b) => [b.up?.name, b.down?.name]).join()).not.toContain('Optimale')
+  })
+
+  it('fusionne arrêt et démarrage quand ils sont au même débit', () => {
+    expect(turbineBands({ ...c, startFlow: 20 }).map((b) => b.value)).toEqual([20, 150])
+  })
+
+  it('annonce le démarrage puis la crue', () => {
+    expect(stationLine(moving(10), 25, opts(turbineBands(c))).text).toBe('▲ Démarrage ~30 min')
+    expect(stationLine(moving(10), 145, opts(turbineBands(c))).text).toBe('▲ Crue ~30 min')
   })
 })

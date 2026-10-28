@@ -39,6 +39,17 @@ export function exploitBands(c: ExploitConfig): TrendBand[] {
   ]
 }
 
+/**
+ * Seuils de la turbine vus depuis la station de reference (debits equivalents) : arret, demarrage et crue.
+ * Le demarrage n'est distinct que s'il est au-dessus du seuil d'arret.
+ */
+export function turbineBands(c: ExploitConfig): TrendBand[] {
+  const bands: TrendBand[] = [{ value: c.minFlow, up: { name: 'Marche', good: true }, down: { name: 'Arrêt', good: false } }]
+  if (c.startFlow > c.minFlow) bands.push({ value: c.startFlow, up: { name: 'Démarrage', good: true } })
+  bands.push({ value: c.maxFlow, up: { name: 'Crue', good: false }, down: { name: 'Marche', good: true } })
+  return bands
+}
+
 export interface StationLine {
   arrow: '▲' | '▼' | '▬'
   /** Une ligne courte (18 caracteres environ sur mobile), fleche comprise. */

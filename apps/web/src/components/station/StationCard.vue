@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { LEVEL_ANALYZE_OPTIONS, flowAnalyzeOptions } from '@/domain/constants'
 import { fmtDate, fmtLevel, fmtQ, fmtTrend, levelRateToCmPerHour, pluralize } from '@/domain/format'
 import { mean, rangeStatus } from '@/domain/series'
-import { exploitBands, stationBands, stationLine } from '@/domain/stationTrend'
+import { stationBands, stationLine, turbineBands } from '@/domain/stationTrend'
 import { analyzeSeries } from '@/domain/trend'
 import type { ExploitConfig, SeriesPoint, Station, StationState, Thresholds, TimeWindow } from '@/domain/types'
 import BaseBadge from '../ui/BaseBadge.vue'
@@ -57,7 +57,7 @@ function ageMin(points: SeriesPoint[]): number | null {
 // Mesure principale (debit, sinon niveau) : la ligne annonce le prochain seuil franchi. Station de reference :
 // seuils d'exploitation. L'autre mesure garde une ligne simple.
 const flowBands = computed(() =>
-  props.isReference ? exploitBands(props.exploit) : stationBands(props.thresholds.flow),
+  props.isReference ? turbineBands(props.exploit) : stationBands(props.thresholds.flow),
 )
 const flowLine = computed(() =>
   lastFlow.value === null
@@ -118,7 +118,7 @@ function commit(range: { low: number; high: number }) {
 
 function openConfig() {
   menuOpen.value = false
-  emit('openConfig', 'seuils')
+  emit('openConfig', 'turbine')
 }
 
 function onDocumentClick(event: MouseEvent) {
@@ -158,13 +158,11 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
           />
           <div v-if="menuOpen" class="card__dropdown">
             <template v-if="isReference">
-              <p class="card__dropdown-title">Seuils d'exploitation</p>
+              <p class="card__dropdown-title">Seuils de la turbine (vus d’ici)</p>
               <dl class="card__readonly">
-                <div><dt>Débit minimal</dt><dd>{{ fmtQ(exploit.minFlow) }} m³/s</dd></div>
+                <div><dt>Arrêt sous</dt><dd>{{ fmtQ(exploit.minFlow) }} m³/s</dd></div>
                 <div><dt>Démarrage</dt><dd>{{ fmtQ(exploit.startFlow) }} m³/s</dd></div>
-                <div><dt>Zone optimale</dt><dd>{{ fmtQ(exploit.optMin) }} – {{ fmtQ(exploit.optMax) }} m³/s</dd></div>
-                <div><dt>Débit maximum</dt><dd>{{ fmtQ(exploit.maxFlow) }} m³/s</dd></div>
-                <div><dt>Délai de propagation</dt><dd>{{ exploit.propagationMin }} min</dd></div>
+                <div><dt>Crue (arrêt)</dt><dd>{{ fmtQ(exploit.maxFlow) }} m³/s</dd></div>
               </dl>
               <button type="button" class="card__link" @click="openConfig">Modifier dans la configuration</button>
             </template>

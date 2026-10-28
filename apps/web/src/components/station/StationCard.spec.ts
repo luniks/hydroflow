@@ -172,9 +172,9 @@ describe('StationCard', () => {
       expect(flowLine(wrapper)).toMatchObject({ text: '▲ Haut ~26 min', tone: 'warn' })
     })
 
-    it('station de référence : reprend les zones d’exploitation (entrée en zone optimale)', () => {
-      const wrapper = factory(makeState({ flowPoints: rising(30, 40) }), true)
-      expect(flowLine(wrapper)).toMatchObject({ text: '▲ Optimale ~30 min', tone: 'ok' })
+    it('station de référence : reprend les seuils de la turbine (démarrage à venir)', () => {
+      const wrapper = factory(makeState({ flowPoints: rising(15, 25) }), true)
+      expect(flowLine(wrapper)).toMatchObject({ text: '▲ Démarrage ~30 min', tone: 'ok' })
     })
 
     it('mesure principale = niveau quand il n’y a pas de débit : seuils de niveau', () => {
@@ -241,22 +241,22 @@ describe('StationCard', () => {
       await wrapper.find('[aria-label="Réglages des seuils"]').trigger('click')
       const dropdown = wrapper.find('.card__dropdown')
 
-      expect(dropdown.find('.card__dropdown-title').text()).toBe("Seuils d'exploitation")
+      expect(dropdown.find('.card__dropdown-title').text()).toBe('Seuils de la turbine (vus d’ici)')
       expect(dropdown.findAll('input')).toHaveLength(0)
       const text = dropdown.find('.card__readonly').text()
       expect(text).toContain('20 m³/s')
       expect(text).toContain('30 m³/s')
-      expect(text).toContain('45 – 135 m³/s')
       expect(text).toContain('150 m³/s')
-      expect(text).toContain(`${EXPLOIT_DEFAULTS.propagationMin} min`)
+      expect(text).not.toContain('Zone optimale')
+      expect(text).not.toContain('Délai de propagation')
     })
 
-    it('ouvre l’onglet des seuils d’exploitation et referme le menu', async () => {
+    it('ouvre l’onglet de la turbine et referme le menu', async () => {
       const wrapper = factory(makeState(), true)
       await wrapper.find('[aria-label="Réglages des seuils"]').trigger('click')
       await wrapper.find('.card__link').trigger('click')
 
-      expect(wrapper.emitted('openConfig')).toEqual([['seuils']])
+      expect(wrapper.emitted('openConfig')).toEqual([['turbine']])
       expect(wrapper.find('.card__dropdown').exists()).toBe(false)
     })
   })
