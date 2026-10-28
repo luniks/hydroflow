@@ -28,17 +28,6 @@ export function stationBands(range: Range): TrendBand[] {
   ]
 }
 
-/** Seuils d'exploitation de la station de reference : les noms sont ceux des zones de la jauge. */
-export function exploitBands(c: ExploitConfig): TrendBand[] {
-  return [
-    { value: c.minFlow, up: { name: 'Marche', good: true }, down: { name: 'Arrêt', good: false } },
-    { value: c.startFlow, up: { name: 'Démarrage', good: true } },
-    { value: c.optMin, up: { name: 'Optimale', good: true }, down: { name: 'Marche', good: false } },
-    { value: c.optMax, up: { name: 'Limite', good: false }, down: { name: 'Optimale', good: true } },
-    { value: c.maxFlow, up: { name: 'Arrêt', good: false }, down: { name: 'Limite', good: true } },
-  ]
-}
-
 /**
  * Seuils de la turbine vus depuis la station de reference (debits equivalents) : arret, demarrage et crue.
  * Le demarrage n'est distinct que s'il est au-dessus du seuil d'arret.

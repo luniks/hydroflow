@@ -53,16 +53,6 @@ export interface ExploitConfig {
   watchMargin?: number
 }
 
-export type ZoneId = 'stop-low' | 'run-low' | 'opt' | 'run-high' | 'stop-high'
-export type ZoneState = 'danger' | 'run' | 'ok'
-
-export interface Zone {
-  zone: ZoneId
-  state: ZoneState
-  label: string
-  zoneName: string
-}
-
 /** Etat suppose de la turbine, deduit de l'historique du debit (l'application ne le mesure pas). */
 export type TurbineState = 'run' | 'stop'
 

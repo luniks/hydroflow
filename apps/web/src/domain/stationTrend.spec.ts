@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { GIROUSSENS, LAVAUR_3H, VIELMUR_NIVEAU } from '@/test/realSeries'
-import { EXPLOIT_DEFAULTS, flowAnalyzeOptions, LEVEL_ANALYZE_OPTIONS } from './constants'
+import { flowAnalyzeOptions, LEVEL_ANALYZE_OPTIONS } from './constants'
 import { fmtTrend } from './format'
-import { exploitBands, stationBands, stationLine, TREND_STALE_MIN, turbineBands, type TrendBand } from './stationTrend'
+import { stationBands, stationLine, TREND_STALE_MIN, turbineBands, type TrendBand } from './stationTrend'
 import { analyzeSeries } from './trend'
 import type { SeriesAnalysis, SeriesPoint } from './types'
 
@@ -28,20 +28,20 @@ const upTo = (points: SeriesPoint[], hhmm: string) =>
   points.filter((p) => Date.parse(p.t) <= Date.parse(`2026-10-21T${hhmm}:00Z`))
 const lastOf = (p: SeriesPoint[]) => p[p.length - 1]!.y
 const opts = (bands: TrendBand[], ageMin: number | null = null) => ({ bands, formatRate: flowRate, ageMin })
-const EXPLOIT = exploitBands(EXPLOIT_DEFAULTS)
+/** Cinq seuils (arret 20 · demarrage 30 · optimal 45-135 · crue 150) : de quoi tester le moteur sur plusieurs franchissements. */
+const EXPLOIT: TrendBand[] = [
+  { value: 20, up: { name: 'Marche', good: true }, down: { name: 'Arrêt', good: false } },
+  { value: 30, up: { name: 'Démarrage', good: true } },
+  { value: 45, up: { name: 'Optimale', good: true }, down: { name: 'Marche', good: false } },
+  { value: 135, up: { name: 'Limite', good: false }, down: { name: 'Optimale', good: true } },
+  { value: 150, up: { name: 'Arrêt', good: false }, down: { name: 'Limite', good: true } },
+]
 
 describe('bandes de seuils', () => {
   it('une station ordinaire : sortir de la plage est à surveiller, y revenir est bon', () => {
     const [low, high] = stationBands({ low: 5, high: 20 })
     expect(low).toMatchObject({ value: 5, down: { name: 'Bas', good: false }, up: { name: 'Retour', good: true } })
     expect(high).toMatchObject({ value: 20, up: { name: 'Haut', good: false }, down: { name: 'Retour', good: true } })
-  })
-
-  it('la station de référence reprend les noms des zones de la jauge', () => {
-    expect(EXPLOIT.map((b) => b.value)).toEqual([20, 30, 45, 135, 150])
-    expect(EXPLOIT[1]!.down).toBeUndefined() // quitter le seuil de démarrage vers le bas n'est pas un événement
-    expect(EXPLOIT[2]).toMatchObject({ up: { name: 'Optimale', good: true }, down: { name: 'Marche', good: false } })
-    expect(EXPLOIT[3]).toMatchObject({ up: { name: 'Limite', good: false }, down: { name: 'Optimale', good: true } })
   })
 })
 

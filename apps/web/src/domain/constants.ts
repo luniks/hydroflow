@@ -1,4 +1,4 @@
-import type { AnalyzeOptions, ExploitConfig, RainPointDef, Range, Station, Thresholds, TurbineModel } from './types'
+import type { AnalyzeOptions, RainPointDef, Range, Station, Thresholds, TurbineModel } from './types'
 
 export const DEFAULT_THRESHOLDS: Thresholds = {
   level: { low: 0.5, high: 2.5 },
@@ -52,16 +52,6 @@ export const DEFAULT_STATIONS: Station[] = [
     thresholds: normThresholds(),
   },
 ]
-
-export const EXPLOIT_DEFAULTS: ExploitConfig = {
-  refCode: 'O469251003',
-  minFlow: 20,
-  startFlow: 30,
-  maxFlow: 150,
-  optMin: 45,
-  optMax: 135,
-  propagationMin: 80,
-}
 
 /**
  * Modele de la turbine VLH de St-Jean-de-Rive. Valeurs issues de la fiche de la turbine, des releves
@@ -161,9 +151,7 @@ export const AUTO_REFRESH_OPTIONS = [0, 5, 10, 30] as const
 
 export const STORAGE_KEYS = {
   stations: 'custom_stations_v2',
-  exploit: 'exploitation_config_v1',
   turbineModel: 'turbine_model_v2',
-  exploitCollapsed: 'exploitation_collapsed',
   rainHidden: 'rain_hidden_v1',
   rainExternal: 'rain_external_v1',
   rainGroupsCollapsed: 'rain_groups_collapsed_v1',

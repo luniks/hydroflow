@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_TURBINE_MODEL as M } from './constants'
-import { validateExploit } from './exploitation'
 import {
   cloneTurbineModel,
   efficiencyAt,
@@ -109,7 +108,13 @@ describe('turbineModel · zone optimale', () => {
 
   it('produit une configuration d’exploitation valide, sans délai (série déjà décalée)', () => {
     const c = exploitConfigFromModel(M)
-    expect(validateExploit(c)).toBeNull()
+    // seuils ordonnes : arret < demarrage < crue, zone optimale entre les deux
+    expect(c.minFlow).toBeGreaterThan(0)
+    expect(c.startFlow).toBeGreaterThanOrEqual(c.minFlow)
+    expect(c.maxFlow).toBeGreaterThan(c.startFlow)
+    expect(c.optMin).toBeGreaterThan(c.minFlow)
+    expect(c.optMax).toBeGreaterThan(c.optMin)
+    expect(c.optMax).toBeLessThanOrEqual(c.maxFlow)
     expect(c.propagationMin).toBe(0)
     expect(c.startFlow).toBeCloseTo(12.55, 2)
   })

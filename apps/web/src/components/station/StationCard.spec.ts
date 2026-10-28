@@ -4,7 +4,8 @@ import StationCard from './StationCard.vue'
 import SparklineChart from '../charts/SparklineChart.vue'
 import MetricValue from '../metric/MetricValue.vue'
 import BaseBadge from '../ui/BaseBadge.vue'
-import { DEFAULT_STATIONS, EXPLOIT_DEFAULTS, normThresholds } from '@/domain/constants'
+import { DEFAULT_STATIONS, normThresholds } from '@/domain/constants'
+import { SITE_EXPLOIT } from '@/test/exploitFixture'
 import type { StationState, TimeWindow } from '@/domain/types'
 
 const station = DEFAULT_STATIONS[0]!
@@ -47,7 +48,7 @@ function factory(
       window: extra.window ?? ENDED,
       hours: 24,
       isReference,
-      exploit: EXPLOIT_DEFAULTS,
+      exploit: SITE_EXPLOIT,
       nowMs: extra.nowMs ?? NOW,
     },
   })

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { TEST_EXPLOIT } from '@/test/exploitFixture'
+import { TEST_EXPLOIT, SITE_EXPLOIT } from '@/test/exploitFixture'
 import { LAVAUR_3H } from '@/test/realSeries'
-import { EXPLOIT_DEFAULTS } from './constants'
 import { inferTurbineState, outlookForState, turbineOutlook } from './turbineOutlook'
 import type { ExploitConfig, SeriesPoint } from './types'
 
@@ -272,18 +271,18 @@ describe('outlookForState · turbine à l’arrêt', () => {
 
 describe('turbineOutlook · valeurs par défaut du site', () => {
   it('juge stable une turbine qui tourne dans la plage optimale', () => {
-    expect(turbineOutlook(flat(90), EXPLOIT_DEFAULTS, NOW).kind).toBe('run-stable')
+    expect(turbineOutlook(flat(90), SITE_EXPLOIT, NOW).kind).toBe('run-stable')
   })
 
   it('reste à l’arrêt sous le débit de démarrage, en signalant la proximité du seuil', () => {
     // Marge de vigilance = 10 % de (150 − 20) = 13 m³/s.
-    expect(turbineOutlook(flat(25), EXPLOIT_DEFAULTS, NOW).kind).toBe('stopped-watch')
-    expect(turbineOutlook(flat(15), EXPLOIT_DEFAULTS, NOW).kind).toBe('stopped-stable')
+    expect(turbineOutlook(flat(25), SITE_EXPLOIT, NOW).kind).toBe('stopped-watch')
+    expect(turbineOutlook(flat(15), SITE_EXPLOIT, NOW).kind).toBe('stopped-stable')
   })
 
   it('annonce un démarrage quand le débit atteint 30 m³/s', () => {
     // 22 → 40 m³/s en 80 min : le seuil de démarrage (80), est franchi à 1 h 04.
-    const o = turbineOutlook(pts([30, 22], [0, 40]), EXPLOIT_DEFAULTS, NOW)
+    const o = turbineOutlook(pts([30, 22], [0, 40]), SITE_EXPLOIT, NOW)
     expect(o).toMatchObject({ kind: 'start-expected', source: 'observed', turbine: 'stop' })
     expect(o.headline).toBe('Démarrage prévu dans 1 h 04')
   })
@@ -292,11 +291,11 @@ describe('turbineOutlook · valeurs par défaut du site', () => {
 describe('turbineOutlook · zone optimale', () => {
   const upTo = (hhmm: string) => LAVAUR_3H.filter((p) => Date.parse(p.t) <= Date.parse(`2026-10-21T${hhmm}:00Z`))
   const at = (hhmm: string) => Date.parse(`2026-10-21T${hhmm}:00Z`)
-  const noDelay = { ...EXPLOIT_DEFAULTS, propagationMin: 0 }
+  const noDelay = { ...SITE_EXPLOIT, propagationMin: 0 }
 
   it('annonce la sortie de zone à partir de mesures déjà faites en amont (délai de 80 min)', () => {
     // le débit passe sous 45 m³/s à 14:45:37 à la station, donc à 16:05:37 à la turbine ; il est 15:00
-    const o = turbineOutlook(upTo('15:00'), EXPLOIT_DEFAULTS, at('15:00'))
+    const o = turbineOutlook(upTo('15:00'), SITE_EXPLOIT, at('15:00'))
     expect(o).toMatchObject({ kind: 'opt-exit-expected', tone: 'warn', source: 'observed', turbine: 'run' })
     expect(o.headline).toBe('Sortie de zone optimale prévue dans 1 h 06')
     expect(o.detail).toContain('sortie de la zone optimale (45 m³/s)')
@@ -305,7 +304,7 @@ describe('turbineOutlook · zone optimale', () => {
 
   it('annonce l’entrée en zone optimale', () => {
     // 42,8 m³/s à la turbine ; le débit mesuré à 13:33:30 (45 m³/s) y arrive à 14:53:30
-    const o = turbineOutlook(upTo('14:45'), EXPLOIT_DEFAULTS, at('14:45'))
+    const o = turbineOutlook(upTo('14:45'), SITE_EXPLOIT, at('14:45'))
     expect(o).toMatchObject({ kind: 'opt-entry-expected', tone: 'ok', source: 'observed' })
     expect(o.headline).toBe('Zone optimale prévue dans 9 min')
     expect(o.detail).toContain('entrée dans la zone optimale (45 m³/s)')
@@ -328,7 +327,7 @@ describe('turbineOutlook · zone optimale', () => {
   })
 
   it('annonce un arrêt estimé avec le délai de 80 min, au-delà du débit déjà mesuré', () => {
-    const o = turbineOutlook(LAVAUR_3H, EXPLOIT_DEFAULTS, at('16:20'))
+    const o = turbineOutlook(LAVAUR_3H, SITE_EXPLOIT, at('16:20'))
     expect(o.kind).toBe('stop-expected')
     expect(o.source).toBe('estimated')
     expect(o.inMinutes).toBeGreaterThan(80)
