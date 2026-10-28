@@ -8,7 +8,7 @@ import { useTimeRange } from '@/composables/useTimeRange'
 import AppFooter from '@/components/layout/AppFooter.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import ConfigModal from '@/components/config/ConfigModal.vue'
-import ExploitPanel from '@/components/exploitation/ExploitPanel.vue'
+import ExploitZone from '@/components/exploitation/ExploitZone.vue'
 import RainSection from '@/components/rain/RainSection.vue'
 import StationGrid from '@/components/station/StationGrid.vue'
 
@@ -54,7 +54,7 @@ onMounted(() => void loadAll())
     />
 
     <main class="app__main">
-      <ExploitPanel :vigicrues="vigicrues" :now-ms="nowMs" />
+      <ExploitZone :vigicrues="vigicrues" :now-ms="nowMs" />
       <StationGrid :now-ms="nowMs" @refresh="refreshStation" @open-config="openConfig" />
       <RainSection :now-ms="nowMs" @refresh="refreshRainPoint" @open-config="openConfig" />
     </main>
