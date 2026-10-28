@@ -75,7 +75,9 @@ export function turbineForecast(
   const site = rideThrough(siteFlowSeries(ref, calibration, m), stopFlowOf(m), m.stopHoldMin)
   // La marge de surveillance suit l'incertitude du calage : la plage [minimal ; maximum] est ici tres large (crue).
   const cfg = exploitConfigFromModel(m, Math.max(MIN_WATCH_MARGIN, calibration.sigma))
-  const outlook = turbineOutlook(site, cfg, nowMs)
+  // La peremption se juge sur la date de la mesure, pas sur son arrivee au barrage (decalee du delai de propagation).
+  const measuredAtMs = ref.length ? Date.parse(ref[ref.length - 1]!.t) : undefined
+  const outlook = turbineOutlook(site, cfg, nowMs, measuredAtMs)
   const empty: TurbineForecast = {
     outlook,
     calibration,

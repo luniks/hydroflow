@@ -161,6 +161,23 @@ describe('StationCard', () => {
     expect(text).toContain('2 mesures — 24 h')
   })
 
+  describe('fenêtre des graphiques', () => {
+    const ends = (wrapper: ReturnType<typeof factory>) =>
+      wrapper.findAllComponents(SparklineChart).map((c) => (c.props('windowEnd') as Date).toISOString())
+
+    it('en direct, la fin de fenêtre suit le début de fenêtre recalculé à chaque chargement', async () => {
+      const wrapper = factory(makeState(), false, { window: LIVE })
+      expect(ends(wrapper)).toEqual(['2026-10-02T00:00:00.000Z']) // debut + 24 h
+
+      await wrapper.setProps({ window: { dateDebut: new Date('2026-10-01T00:10:00Z'), dateFin: null } })
+      expect(ends(wrapper)).toEqual(['2026-10-02T00:10:00.000Z'])
+    })
+
+    it('dans le passé, garde la fin de période choisie', () => {
+      expect(ends(factory())).toEqual(['2026-10-01T04:00:00.000Z'])
+    })
+  })
+
   describe('ligne de tendance', () => {
     it('donne la pente quand aucun seuil n’est proche', () => {
       // 10 -> 12 m³/s en 2 h : +1 m³/s/h, le seuil haut (20) est a 8 h

@@ -30,6 +30,15 @@ describe('turbineOutlook · cas sans prévision', () => {
     expect(o.detail).toContain('plus de 2 h')
   })
 
+  it('juge la péremption sur la date de mesure fournie, pas sur celle du dernier point', () => {
+    // Point decale de 90 min (delai de propagation) : arrive a NOW - 30 min pour une mesure faite a NOW - 120 min.
+    const shifted = pts([30, 14])
+    expect(turbineOutlook(shifted, c, NOW).kind).not.toBe('stale')
+    const o = turbineOutlook(shifted, c, NOW, NOW - 150 * 60_000)
+    expect(o.kind).toBe('stale')
+    expect(o.headline).toBe('Aucune prévision · dernière mesure il y a 2 h 30')
+  })
+
   it('accepte une mesure tout juste dans la limite', () => {
     expect(turbineOutlook(pts([120, 14]), c, NOW).kind).not.toBe('stale')
     expect(turbineOutlook(pts([121, 14]), c, NOW).kind).toBe('stale')

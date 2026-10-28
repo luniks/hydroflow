@@ -42,6 +42,13 @@ describe('turbineForecast · cas sans prévision', () => {
     expect(f.confidence).toBeNull()
   })
 
+  it('mesure l’âge depuis la mesure elle-même, pas depuis son arrivée au barrage', () => {
+    const f = turbineForecast(series(2, () => 40), [], M, NOW + 125 * MIN)
+    expect(f.outlook.kind).toBe('stale')
+    expect(f.outlook.headline).toBe('Aucune prévision · dernière mesure il y a 2 h 05')
+    expect(turbineForecast(series(2, () => 40), [], M, NOW + 115 * MIN).outlook.kind).not.toBe('stale')
+  })
+
   it('refuse de prévoir à partir de mesures trop anciennes', () => {
     const old = series(2, () => 30).map((p) => ({ ...p, t: new Date(Date.parse(p.t) - 8 * 3_600_000).toISOString() }))
     const f = turbineForecast(old, [], M, NOW)

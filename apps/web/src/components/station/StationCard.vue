@@ -39,7 +39,9 @@ const menuRoot = ref<HTMLElement | null>(null)
 const name = computed(() => props.state.name || props.station.fallbackName)
 const label = computed(() => props.station.label)
 
-const windowEnd = computed(() => props.window.dateFin ?? new Date())
+// Fin de fenetre deduite du debut : en direct elle vaut « debut + duree », et suit donc la fenetre recalculee a chaque chargement
+// (un `new Date()` ici serait fige par le cache du computed et laisserait les nouvelles mesures hors du graphique).
+const windowEnd = computed(() => props.window.dateFin ?? new Date(props.window.dateDebut.getTime() + props.hours * 3_600_000))
 
 const levelMean = computed(() => mean(props.state.points.map((p) => p.y)))
 const flowMean = computed(() => mean(props.state.flowPoints.map((p) => p.y)))

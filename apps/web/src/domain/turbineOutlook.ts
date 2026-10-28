@@ -89,10 +89,20 @@ export function inferTurbineState(points: SeriesPoint[], c: ExploitConfig, nowMs
  * Anticipe le demarrage ou l'arret de la turbine a partir du debit observe a la station de reference.
  * L'etat de la turbine (marche / arret) est deduit par `inferTurbineState`.
  */
-export function turbineOutlook(points: SeriesPoint[], c: ExploitConfig, nowMs: number): TurbineOutlook {
+export function turbineOutlook(
+  points: SeriesPoint[],
+  c: ExploitConfig,
+  nowMs: number,
+  /**
+   * Instant (ms) de la derniere mesure reellement effectuee. Les points d'une serie « au barrage » sont decales de
+   * leur delai de propagation : leur date est celle de l'arrivee a la turbine, pas celle de la mesure. Sans cet
+   * argument, la date du dernier point sert de reference.
+   */
+  measuredAtMs?: number,
+): TurbineOutlook {
   if (!points.length) return base('unknown', 'neutral', null, null, 'En attente de mesure…')
 
-  const ageMin = (nowMs - Date.parse(points[points.length - 1]!.t)) / MINUTE_MS
+  const ageMin = (nowMs - (measuredAtMs ?? Date.parse(points[points.length - 1]!.t))) / MINUTE_MS
   if (ageMin > OUTLOOK_STALE_MIN) {
     return {
       ...base('stale', 'warn', null, null, `Aucune prévision · dernière mesure il y a ${fmtDuration(ageMin)}`),

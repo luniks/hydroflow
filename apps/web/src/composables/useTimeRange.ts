@@ -10,13 +10,22 @@ const hours = useLocalStorage<number>(STORAGE_KEYS.rangeHours, DEFAULT_RANGE_HOU
     typeof raw === 'number' && RANGES.some((r) => r.hours === raw) ? raw : null,
 })
 
+/**
+ * Incremente a chaque chargement termine : la fenetre « maintenant - duree » dependant de l'horloge, elle doit etre
+ * recalculee pour suivre les nouvelles mesures (sinon les graphiques gardent la fin de fenetre du premier calcul).
+ */
+const refreshTick = ref(0)
+
 /** Nombre de pas (de la duree selectionnee) remontes dans le passe. 0 = direct. */
 const offsetSteps = ref(0)
 
 export function useTimeRange() {
   const range = computed(() => RANGES.find((r) => r.hours === hours.value) ?? RANGES[2])
   const isLive = computed(() => offsetSteps.value === 0)
-  const window = computed(() => computeWindow(hours.value, offsetSteps.value))
+  const window = computed(() => {
+    void refreshTick.value
+    return computeWindow(hours.value, offsetSteps.value)
+  })
 
   return {
     hours,
@@ -25,6 +34,10 @@ export function useTimeRange() {
     isLive,
     window,
     ranges: RANGES,
+    /** A appeler une fois les series rechargees : decale la fenetre en direct jusqu'a l'instant present. */
+    refreshWindow: () => {
+      refreshTick.value += 1
+    },
     setHours(value: number) {
       if (!RANGES.some((r) => r.hours === value)) return
       hours.value = value

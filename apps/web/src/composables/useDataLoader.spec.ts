@@ -106,6 +106,16 @@ describe('useDataLoader', () => {
     }
     const tick = () => new Promise((r) => setTimeout(r, 20))
 
+    it('recalcule la fenêtre en direct après un chargement, pour que les graphiques suivent les nouvelles mesures', async () => {
+      const range = useTimeRange()
+      range.hours.value = 24
+      await loader.loadAll()
+      const before = range.window.value
+      await tick()
+      await loader.loadAll()
+      expect(range.window.value.dateDebut.getTime()).toBeGreaterThan(before.dateDebut.getTime())
+    })
+
     it('ne perd pas un changement de période demandé pendant un chargement', async () => {
       const range = useTimeRange()
       range.hours.value = 24
