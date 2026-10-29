@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { EXPLOIT_DEFAULTS } from '@/domain/constants'
+import { DEFAULT_TURBINE_MODEL } from '@/domain/constants'
+import { cloneTurbineModel } from '@/domain/turbineModel'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import BaseTabs from '@/components/ui/BaseTabs.vue'
 import { useConfigDraft } from './useConfigDraft'
 import StationsTab from './tabs/StationsTab.vue'
-import ThresholdsTab from './tabs/ThresholdsTab.vue'
+import TurbineTab from './tabs/TurbineTab.vue'
 import RainTab from './tabs/RainTab.vue'
 
 const props = withDefaults(defineProps<{ open: boolean; initialTab?: string }>(), {
@@ -24,7 +25,7 @@ const TABS = computed(() => [
     icon: 'pin' as const,
     count: draft.stations.length,
   },
-  { id: 'seuils', label: "Seuils d'exploitation", shortLabel: 'Seuils', icon: 'bolt' as const },
+  { id: 'turbine', label: 'Turbine', icon: 'bolt' as const },
   { id: 'pluie', label: 'Pluviométrie', icon: 'cloud' as const },
 ])
 
@@ -42,7 +43,7 @@ watch(
   },
 )
 
-const refCode = computed(() => draft.exploit.refCode)
+const refCode = computed(() => draft.turbine.refCode)
 
 function onCancel() {
   cancel()
@@ -53,7 +54,7 @@ function onSave() {
   const error = commit()
   if (error) {
     saveError.value = error
-    activeTab.value = 'seuils'
+    activeTab.value = 'turbine'
     return
   }
   saveError.value = null
@@ -61,8 +62,9 @@ function onSave() {
   emit('close')
 }
 
-function resetExploit() {
-  draft.exploit = { ...EXPLOIT_DEFAULTS, refCode: draft.exploit.refCode }
+/** Les valeurs du modele, en conservant les stations choisies. */
+function resetTurbine() {
+  draft.turbine = { ...cloneTurbineModel(DEFAULT_TURBINE_MODEL), refCode: draft.turbine.refCode, downCode: draft.turbine.downCode }
 }
 
 function resetAll() {
@@ -75,7 +77,7 @@ function resetAll() {
   <BaseModal
     :open="open"
     title="Configuration & Paramètres"
-    subtitle="Gestion des stations Hub'Eau & seuils d'exploitation de la centrale"
+    subtitle="Gestion des stations Hub'Eau & paramètres de la turbine"
     icon="gear"
     width="820px"
     @close="onCancel"
@@ -84,8 +86,8 @@ function resetAll() {
       <template #stations>
         <StationsTab :draft="draft" :ref-code="refCode" @reset="resetAll" />
       </template>
-      <template #seuils>
-        <ThresholdsTab :draft="draft" @reset="resetExploit" />
+      <template #turbine>
+        <TurbineTab :draft="draft" @reset="resetTurbine" />
       </template>
       <template #pluie>
         <RainTab :draft="draft" />

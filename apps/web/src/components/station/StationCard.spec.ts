@@ -4,7 +4,8 @@ import StationCard from './StationCard.vue'
 import SparklineChart from '../charts/SparklineChart.vue'
 import MetricValue from '../metric/MetricValue.vue'
 import BaseBadge from '../ui/BaseBadge.vue'
-import { DEFAULT_STATIONS, EXPLOIT_DEFAULTS, normThresholds } from '@/domain/constants'
+import { DEFAULT_STATIONS, normThresholds } from '@/domain/constants'
+import { SITE_EXPLOIT } from '@/test/exploitFixture'
 import type { StationState, TimeWindow } from '@/domain/types'
 
 const station = DEFAULT_STATIONS[0]!
@@ -47,7 +48,7 @@ function factory(
       window: extra.window ?? ENDED,
       hours: 24,
       isReference,
-      exploit: EXPLOIT_DEFAULTS,
+      exploit: SITE_EXPLOIT,
       nowMs: extra.nowMs ?? NOW,
     },
   })
@@ -161,6 +162,23 @@ describe('StationCard', () => {
     expect(text).toContain('2 mesures — 24 h')
   })
 
+  describe('fenêtre des graphiques', () => {
+    const ends = (wrapper: ReturnType<typeof factory>) =>
+      wrapper.findAllComponents(SparklineChart).map((c) => (c.props('windowEnd') as Date).toISOString())
+
+    it('en direct, la fin de fenêtre suit le début de fenêtre recalculé à chaque chargement', async () => {
+      const wrapper = factory(makeState(), false, { window: LIVE })
+      expect(ends(wrapper)).toEqual(['2026-10-02T00:00:00.000Z']) // debut + 24 h
+
+      await wrapper.setProps({ window: { dateDebut: new Date('2026-10-01T00:10:00Z'), dateFin: null } })
+      expect(ends(wrapper)).toEqual(['2026-10-02T00:10:00.000Z'])
+    })
+
+    it('dans le passé, garde la fin de période choisie', () => {
+      expect(ends(factory())).toEqual(['2026-10-01T04:00:00.000Z'])
+    })
+  })
+
   describe('ligne de tendance', () => {
     it('donne la pente quand aucun seuil n’est proche', () => {
       // 10 -> 12 m³/s en 2 h : +1 m³/s/h, le seuil haut (20) est a 8 h
@@ -172,9 +190,9 @@ describe('StationCard', () => {
       expect(flowLine(wrapper)).toMatchObject({ text: '▲ Haut ~26 min', tone: 'warn' })
     })
 
-    it('station de référence : reprend les zones d’exploitation (entrée en zone optimale)', () => {
-      const wrapper = factory(makeState({ flowPoints: rising(30, 40) }), true)
-      expect(flowLine(wrapper)).toMatchObject({ text: '▲ Optimale ~30 min', tone: 'ok' })
+    it('station de référence : reprend les seuils de la turbine (démarrage à venir)', () => {
+      const wrapper = factory(makeState({ flowPoints: rising(15, 25) }), true)
+      expect(flowLine(wrapper)).toMatchObject({ text: '▲ Démarrage ~30 min', tone: 'ok' })
     })
 
     it('mesure principale = niveau quand il n’y a pas de débit : seuils de niveau', () => {
@@ -241,22 +259,22 @@ describe('StationCard', () => {
       await wrapper.find('[aria-label="Réglages des seuils"]').trigger('click')
       const dropdown = wrapper.find('.card__dropdown')
 
-      expect(dropdown.find('.card__dropdown-title').text()).toBe("Seuils d'exploitation")
+      expect(dropdown.find('.card__dropdown-title').text()).toBe('Seuils de la turbine (vus d’ici)')
       expect(dropdown.findAll('input')).toHaveLength(0)
       const text = dropdown.find('.card__readonly').text()
       expect(text).toContain('20 m³/s')
       expect(text).toContain('30 m³/s')
-      expect(text).toContain('45 – 135 m³/s')
       expect(text).toContain('150 m³/s')
-      expect(text).toContain(`${EXPLOIT_DEFAULTS.propagationMin} min`)
+      expect(text).not.toContain('Zone optimale')
+      expect(text).not.toContain('Délai de propagation')
     })
 
-    it('ouvre l’onglet des seuils d’exploitation et referme le menu', async () => {
+    it('ouvre l’onglet de la turbine et referme le menu', async () => {
       const wrapper = factory(makeState(), true)
       await wrapper.find('[aria-label="Réglages des seuils"]').trigger('click')
       await wrapper.find('.card__link').trigger('click')
 
-      expect(wrapper.emitted('openConfig')).toEqual([['seuils']])
+      expect(wrapper.emitted('openConfig')).toEqual([['turbine']])
       expect(wrapper.find('.card__dropdown').exists()).toBe(false)
     })
   })

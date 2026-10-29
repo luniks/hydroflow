@@ -11,7 +11,7 @@ defineProps<{ nowMs: number }>()
 const emit = defineEmits<{ refresh: [code: string]; openConfig: [tab: string] }>()
 
 const { stations, stateOf } = useStations()
-const { exploit } = useExploit()
+const { turbineModel, refConfig } = useExploit()
 const { hours, window } = useTimeRange()
 
 // Les seuils vivent hors du composable (une clé localStorage par station) ; on les relit à chaque rendu.
@@ -55,8 +55,8 @@ function onThresholds(code: string, next: Thresholds) {
       :thresholds="thresholds[station.code]!"
       :window="window"
       :hours="hours"
-      :is-reference="station.code === exploit.refCode"
-      :exploit="exploit"
+      :is-reference="station.code === turbineModel.refCode"
+      :exploit="refConfig"
       :now-ms="nowMs"
       @refresh="emit('refresh', $event)"
       @open-config="emit('openConfig', $event)"

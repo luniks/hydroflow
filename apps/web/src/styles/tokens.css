@@ -21,6 +21,9 @@
   --accent: #38bdf8;
   --accent-contrast: #082f49;
   --flow: #a78bfa;
+  /* Puissance electrique (kW) et zone « sous l'optimal » de la jauge de puissance. */
+  --power: #eab308;
+  --amber: #f59e0b;
   --green: #22c55e;
   --yellow: #eab308;
   --orange: #f97316;
@@ -57,6 +60,8 @@
   --accent: #0284c7;
   --accent-contrast: #f0f9ff;
   --flow: #7c3aed;
+  --power: #ca8a04;
+  --amber: #d97706;
   --green: #16a34a;
   --yellow: #b45309;
   --orange: #c2410c;

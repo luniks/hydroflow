@@ -3,11 +3,12 @@ import { useExploit } from '@/composables/useExploit'
 import { useRain } from '@/composables/useRain'
 import { useStations } from '@/composables/useStations'
 import { DEFAULT_EXTERNAL_RAIN_DEFS, DEFAULT_STATIONS } from '@/domain/constants'
-import type { ExploitConfig, RainPointDef, Station } from '@/domain/types'
+import { cloneTurbineModel } from '@/domain/turbineModel'
+import type { RainPointDef, Station, TurbineModel } from '@/domain/types'
 
 export interface ConfigDraft {
   stations: Station[]
-  exploit: ExploitConfig
+  turbine: TurbineModel
   rainHidden: string[]
   rainExternal: RainPointDef[]
 }
@@ -30,14 +31,14 @@ export function useConfigDraft() {
 
   const draft = reactive<ConfigDraft>({
     stations: [],
-    exploit: { ...exploitStore.exploit.value },
+    turbine: cloneTurbineModel(exploitStore.turbineModel.value),
     rainHidden: [],
     rainExternal: [],
   })
 
   function reset() {
     draft.stations = cloneStations(stationsStore.stations.value)
-    draft.exploit = { ...exploitStore.exploit.value }
+    draft.turbine = cloneTurbineModel(exploitStore.turbineModel.value)
     draft.rainHidden = [...rainStore.hiddenKeys.value]
     draft.rainExternal = rainStore.externalDefs.value.map((d) => ({ ...d }))
   }
@@ -61,7 +62,12 @@ export function useConfigDraft() {
 
   /** Retourne le message d'erreur bloquant, ou `null` si la configuration est appliquee. */
   function commit(): string | null {
-    const error = exploitStore.commit(draft.exploit)
+    const codes = draft.stations.map((s) => s.code)
+    if (!codes.includes(draft.turbine.refCode)) return 'La station amont de référence doit faire partie des stations suivies.'
+    if (draft.turbine.downCode && !codes.includes(draft.turbine.downCode)) {
+      return 'La station aval doit faire partie des stations suivies.'
+    }
+    const error = exploitStore.commit(draft.turbine)
     if (error) return error
 
     stationsStore.stations.value = cloneStations(draft.stations)

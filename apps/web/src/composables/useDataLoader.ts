@@ -15,7 +15,7 @@ const vigicrues = ref<VigicruesInfo | null>(null)
 export function useDataLoader() {
   const { stations, states, syncStates, loadStation } = useStations()
   const rain = useRain()
-  const { hours, offsetSteps } = useTimeRange()
+  const { hours, offsetSteps, refreshWindow } = useTimeRange()
   const api = useApiHealth()
 
   async function loadVigicrues() {
@@ -95,6 +95,8 @@ export function useDataLoader() {
       loadVigicrues(),
     ])
 
+    // Series et fenetre changent ensemble : les points recus datent de maintenant, la fin de fenetre doit les suivre.
+    refreshWindow()
     syncHubeauHealth()
     if (someSourceAnswered()) lastUpdate.value = new Date()
   }

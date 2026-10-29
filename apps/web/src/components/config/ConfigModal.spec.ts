@@ -6,7 +6,7 @@ import { config } from '@/config/env'
 import { useExploit } from '@/composables/useExploit'
 import { useRain } from '@/composables/useRain'
 import { useStations } from '@/composables/useStations'
-import { DEFAULT_STATIONS, EXPLOIT_DEFAULTS, RAIN_EXTERNAL_MAX } from '@/domain/constants'
+import { DEFAULT_STATIONS, DEFAULT_TURBINE_MODEL, RAIN_EXTERNAL_MAX, STORAGE_KEYS } from '@/domain/constants'
 import { server } from '@/test/msw/server'
 import ConfigModal from './ConfigModal.vue'
 import type { ConfigDraft } from './useConfigDraft'
@@ -73,7 +73,7 @@ describe('ConfigModal', () => {
         )
         return spans[0]?.textContent?.trim()
       }),
-    ).toEqual(['Stations suivies', "Seuils d'exploitation", 'Pluviométrie'])
+    ).toEqual(['Stations suivies', 'Turbine', 'Pluviométrie'])
   })
 
   it('annuler ne persiste aucune modification', async () => {
@@ -104,18 +104,48 @@ describe('ConfigModal', () => {
     expect(stations.codes.value).not.toContain('O460251001')
   })
 
-  it('bloque l’enregistrement sur une configuration de seuils invalide', async () => {
+  it('bloque l’enregistrement sur une configuration de turbine invalide', async () => {
     const wrapper = factory()
     const draft = draftOf(wrapper)
-    draft.exploit.optMax = draft.exploit.optMin - 1
+    draft.turbine.headMax = draft.turbine.headMin - 1
     await nextTick()
 
     footerButton('Enregistrer').click()
     await nextTick()
 
     expect(wrapper.emitted('close')).toBeUndefined()
-    expect(document.querySelector('.cfg-foot__error')?.textContent).toContain('« De »')
-    expect(exploit.exploit.value.optMax).toBe(EXPLOIT_DEFAULTS.optMax)
+    expect(document.querySelector('.cfg-foot__error')?.textContent).toContain('chute maximale')
+    expect(exploit.turbineModel.value.headMax).toBe(DEFAULT_TURBINE_MODEL.headMax)
+  })
+
+  it('bloque l’enregistrement si la station amont n’est plus suivie', async () => {
+    const wrapper = factory()
+    const draft = draftOf(wrapper)
+    draft.stations = draft.stations.filter((s) => s.code !== draft.turbine.refCode)
+    await nextTick()
+
+    footerButton('Enregistrer').click()
+    await nextTick()
+
+    expect(wrapper.emitted('close')).toBeUndefined()
+    expect(document.querySelector('.cfg-foot__error')?.textContent).toContain('station amont')
+  })
+
+  it('enregistre les réglages de la turbine', async () => {
+    const wrapper = factory()
+    const draft = draftOf(wrapper)
+    draft.turbine.reserveFlow = 6
+    draft.turbine.lag.refMin = 100
+    await nextTick()
+
+    footerButton('Enregistrer').click()
+    await nextTick()
+
+    expect(wrapper.emitted('saved')).toHaveLength(1)
+    expect(exploit.turbineModel.value.reserveFlow).toBe(6)
+    expect(exploit.turbineModel.value.lag.refMin).toBe(100)
+    await nextTick()
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.turbineModel)!).reserveFlow).toBe(6)
   })
 
   describe('onglet Stations', () => {
@@ -215,53 +245,97 @@ describe('ConfigModal', () => {
     })
   })
 
-  describe('onglet Seuils', () => {
-    it('affiche le message de validation et masque la jauge', async () => {
+  describe('onglet Turbine', () => {
+    it('affiche le message de validation d’un champ vide', async () => {
       const wrapper = factory()
       const draft = draftOf(wrapper)
-      draft.exploit.minFlow = 50
-      await tab(wrapper, 'Seuils')
+      draft.turbine.reserveFlow = Number.NaN
+      await tab(wrapper, 'Turbine')
 
-      expect(document.querySelector('.cfg-error')?.textContent).toBeTruthy()
-      expect(document.querySelector('.gauge__bar')).toBeNull()
+      expect(document.querySelector('.cfg-error')?.textContent).toContain('Débit réservé')
+      expect(document.querySelector('.cfg-preview__list')).toBeNull()
     })
 
-    it('propose les nouveaux seuils et le délai de propagation', async () => {
+    it('propose les stations, l’installation, le comportement et les valeurs déduites', async () => {
       const wrapper = factory()
-      await tab(wrapper, 'Seuils')
+      await tab(wrapper, 'Turbine')
       const titles = [...document.querySelectorAll('.cfg-block__title')].map((el) => el.textContent?.trim())
       expect(titles).toEqual(
-        expect.arrayContaining([
-          'Délai de propagation',
-          'Débit minimal',
-          'Débit maximum',
-          'Débit de démarrage',
-          'Plage de rendement optimal',
-        ]),
+        expect.arrayContaining(['Stations', 'Installation', 'Comportement', 'Valeurs déduites']),
       )
-      expect(titles).not.toContain('Débit de réserve')
-      expect(titles).not.toContain('Capacité maximum')
+      expect(titles).not.toContain('Plage de rendement optimal')
+      expect(titles).not.toContain('Délai de propagation')
     })
 
-    it('refuse un débit de démarrage hors de la plage minimal–maximum', async () => {
+    it('refuse une chute maximale inférieure à la chute minimale', async () => {
       const wrapper = factory()
       const draft = draftOf(wrapper)
-      draft.exploit.startFlow = 999
-      await tab(wrapper, 'Seuils')
-      expect(document.querySelector('.cfg-error')?.textContent).toContain('débit de démarrage')
+      draft.turbine.headMax = 1
+      await tab(wrapper, 'Turbine')
+      expect(document.querySelector('.cfg-error')?.textContent).toContain('chute maximale')
     })
 
     it('ne signale aucune erreur quand la configuration est valide', async () => {
       const wrapper = factory()
-      await tab(wrapper, 'Seuils')
+      await tab(wrapper, 'Turbine')
       expect(document.querySelector('.cfg-error')).toBeNull()
     })
 
-    it('liste les stations du brouillon comme références possibles', async () => {
+    it('liste les stations du brouillon, la station aval étant facultative', async () => {
       const wrapper = factory()
-      await tab(wrapper, 'Seuils')
-      const options = [...document.querySelectorAll('.ui-select option')].map((o) => o.textContent)
-      expect(options.join(' ')).toContain('O469251003')
+      await tab(wrapper, 'Turbine')
+      // Tous les onglets sont montes : on ne garde que les deux selecteurs de station de l'onglet Turbine.
+      const selects = [...document.querySelectorAll('.ui-field')]
+        .filter((f) => /^Station (amont|aval)/.test(f.querySelector('.ui-field__label')?.textContent?.trim() ?? ''))
+        .map((f) => f.querySelector('select')!)
+      expect(selects).toHaveLength(2)
+      const refOptions = [...selects[0]!.querySelectorAll('option')].map((o) => o.textContent)
+      const downOptions = [...selects[1]!.querySelectorAll('option')].map((o) => o.textContent)
+      expect(refOptions.join(' ')).toContain('O469251003')
+      expect(refOptions.join(' ')).not.toContain('Aucune')
+      expect(downOptions[0]).toContain('Aucune')
+    })
+
+    it('met à jour les valeurs déduites avec les réglages', async () => {
+      const wrapper = factory()
+      const draft = draftOf(wrapper)
+      draft.turbine.maxTurbineFlow = 20 // démarrage à 5,5 + 30 % de 20 = 11,5 m³/s
+      await tab(wrapper, 'Turbine')
+      expect(document.querySelector('.cfg-preview__list')?.textContent).toContain('11.5 m³/s')
+    })
+
+    it('rétablit les valeurs du modèle en conservant les stations choisies', async () => {
+      const wrapper = factory()
+      const draft = draftOf(wrapper)
+      draft.turbine.reserveFlow = 9
+      draft.turbine.downCode = ''
+      await tab(wrapper, 'Turbine')
+      const reset = [...document.querySelectorAll<HTMLElement>('.cfg-actions button')].find((b) =>
+        b.textContent?.includes('Rétablir'),
+      )!
+      reset.click()
+      await nextTick()
+      expect(draft.turbine.reserveFlow).toBe(DEFAULT_TURBINE_MODEL.reserveFlow)
+      expect(draft.turbine.refCode).toBe(DEFAULT_TURBINE_MODEL.refCode)
+      expect(draft.turbine.downCode).toBe('')
+    })
+
+    it('ajoute et supprime un point de la courbe de rendement', async () => {
+      const wrapper = factory()
+      const draft = draftOf(wrapper)
+      await tab(wrapper, 'Turbine')
+      const n = draft.turbine.efficiencyCurve.length
+      const add = [...document.querySelectorAll<HTMLElement>('.cfg-advanced button')].find((b) =>
+        b.textContent?.includes('Ajouter un point'),
+      )!
+      add.click()
+      await nextTick()
+      expect(draft.turbine.efficiencyCurve).toHaveLength(n + 1)
+
+      const remove = document.querySelector<HTMLElement>('.cfg-curve button')!
+      remove.click()
+      await nextTick()
+      expect(draft.turbine.efficiencyCurve).toHaveLength(n)
     })
   })
 
