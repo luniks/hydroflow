@@ -278,8 +278,6 @@ export interface ForecastStep {
   powerKw: number
 }
 
-export type ForecastConfidence = 'high' | 'medium' | 'low'
-
 export interface TurbineForecast {
   outlook: TurbineOutlook
   calibration: SiteCalibration
@@ -293,5 +291,4 @@ export interface TurbineForecast {
   energyKwh: number
   /** Probabilite de marche a +30, +60 et +120 min. */
   pRun: { m30: number; m60: number; m120: number } | null
-  confidence: ForecastConfidence | null
 }

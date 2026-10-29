@@ -4,10 +4,8 @@ import { exploitConfigFromModel, grossHead, powerKw, startFlowOf, stopFlowOf } f
 import { turbineOutlook, valueAt } from './turbineOutlook'
 import { analyzeSeries, projectSeries } from './trend'
 import type {
-  ForecastConfidence,
   ForecastStep,
   SeriesPoint,
-  SiteCalibration,
   TurbineForecast,
   TurbineModel,
   TurbineState,
@@ -22,14 +20,8 @@ export const FORECAST_STEP_MIN = 5
  * la tendance extrapolee est bien moins fiable qu'un debit deja observe.
  */
 export const FORECAST_SIGMA_GROWTH = 3
-/** Seuils de certitude (probabilite moyenne de l'etat prevu, sur tout l'horizon). */
-const HIGH_CERTAINTY = 0.9
-const MEDIUM_CERTAINTY = 0.75
 /** Marge minimale (m³/s) de « a surveiller » avant un seuil. */
 const MIN_WATCH_MARGIN = 1.5
-/** Au-dela, le calage est juge peu fiable et la confiance baisse d'un cran. */
-const POOR_SIGMA = 3.5
-
 /** Fonction de repartition de la loi normale centree reduite (approximation d'Abramowitz-Stegun, erreur < 1e-7). */
 export function normalCdf(z: number): number {
   const x = Math.abs(z) / Math.SQRT2
@@ -43,15 +35,6 @@ export function normalCdf(z: number): number {
 export function probabilityIn(mean: number, sigma: number, low: number, high: number): number {
   if (sigma <= 0) return mean >= low && mean <= high ? 1 : 0
   return normalCdf((high - mean) / sigma) - normalCdf((low - mean) / sigma)
-}
-
-function confidenceOf(steps: ForecastStep[], cal: SiteCalibration): ForecastConfidence | null {
-  if (!steps.length) return null
-  // Moyenne et non minimum : un franchissement de seuil attendu donne par nature une probabilite proche de 0,5 a cet instant.
-  const certainty = steps.reduce((a, s) => a + Math.max(s.pRun, 1 - s.pRun), 0) / steps.length
-  let level = certainty >= HIGH_CERTAINTY ? 2 : certainty >= MEDIUM_CERTAINTY ? 1 : 0
-  if (!cal.fitted || cal.sigma > POOR_SIGMA) level = Math.max(0, level - 1)
-  return (['low', 'medium', 'high'] as const)[level]!
 }
 
 /**
@@ -87,7 +70,6 @@ export function turbineForecast(
     siteSeries: site,
     energyKwh: 0,
     pRun: null,
-    confidence: null,
   }
   if (outlook.turbine === null || !site.length) return empty
 
@@ -149,7 +131,6 @@ export function turbineForecast(
     siteSeries: site,
     energyKwh: energy,
     pRun: { m30: at(30), m60: at(60), m120: at(120) },
-    confidence: confidenceOf(steps, calibration),
   }
 }
 

@@ -39,7 +39,6 @@ describe('turbineForecast · cas sans prévision', () => {
     expect(f.steps).toHaveLength(0)
     expect(f.powerKw).toBeNull()
     expect(f.pRun).toBeNull()
-    expect(f.confidence).toBeNull()
   })
 
   it('mesure l’âge depuis la mesure elle-même, pas depuis son arrivée au barrage', () => {
@@ -66,7 +65,6 @@ describe('turbineForecast · débit stable', () => {
     expect(f.siteFlow).toBeCloseTo(site(40), 1)
     expect(f.powerKw!).toBeGreaterThan(300)
     expect(f.pRun!.m60).toBeGreaterThan(0.95)
-    expect(f.confidence).toBe('medium')
     expect(f.energyKwh).toBeGreaterThan(500)
   })
 
