@@ -13,6 +13,10 @@ Démo : [hydroflow.luniks.fr](https://hydroflow.luniks.fr)
 
 Monorepo npm workspaces. Si le proxy est indisponible, l'application web reste fonctionnelle : seul le bandeau de vigilance crues est signalé en erreur.
 
+## Documentation
+
+- [Modèle prédictif de production de la turbine](docs/modele-turbine.md)
+
 ## Démarrage
 
 ```bash
