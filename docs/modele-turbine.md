@@ -206,9 +206,9 @@ avec $q_{seuil}= q_{stop}$ si la turbine tourne, $q_{start}$ sinon ; $q_{max}$ =
 
 La turbine suit le niveau amont : elle ne saute pas à sa puissance cible. À chaque pas, la puissance se rapproche de la cible de **au plus** `rampKwPerMin` × 5 min = 30 kW :
 
-$$ P_{k+1} = P_k + \operatorname{clip}\bigl(P^{cible}_{k+1}-P_k,\; -30,\; +30\bigr) $$
+$$ P_{k+1} = P_k + \mathrm{clip}\bigl(P^{\text{cible}}_{k+1}-P_k,\; -30,\; +30\bigr) $$
 
-Au pas 0, si la turbine tourne : $P_0=\min\bigl(P^{cible},\ \text{rampKwPerMin}\times\text{durée de marche}\bigr)$, la durée de marche étant le temps écoulé depuis que $q$ est repassé au-dessus du seuil d'arrêt (`runningMin`).
+Au pas 0, si la turbine tourne : $P_0=\min\bigl(P^{\text{cible}},\ \text{rampKwPerMin}\times\text{durée de marche}\bigr)$, la durée de marche étant le temps écoulé depuis que $q$ est repassé au-dessus du seuil d'arrêt (`runningMin`).
 
 L'énergie prévue est $E=\sum_k P_k \cdot 5/60$ (kWh).
 
