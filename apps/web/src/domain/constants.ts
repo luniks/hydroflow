@@ -67,7 +67,7 @@ export const DEFAULT_TURBINE_MODEL: TurbineModel = {
   ratedPowerKw: 450,
   reducedPowerKw: 150,
   reducedMin: 0,
-  stopHoldMin: 20,
+  stopHoldMin: 4,
   rampKwPerMin: 6,
   efficiency: 0.65,
   // Caler avec l'historique de production : ~0,5 au demarrage (100-115 kW observes a 30 % de charge), ~0,65 a 40 % (200 kW).
@@ -83,12 +83,12 @@ export const DEFAULT_TURBINE_MODEL: TurbineModel = {
   tailRefLevel: 0.05,
   headCorrection: 0,
   tailRating: { a: 0.0083, b: 1.2035 },
-  lag: { refMin: 90, refFlow: 30, exponent: 0.5, maxMin: 150 },
+  lag: { refMin: 65, refFlow: 30, exponent: 0.5, maxMin: 150 },
   downLagRatio: 17.73 / 15.35,
-  defaultGain: 0.6,
-  defaultOffset: -1.3,
+  defaultGain: 0.44,
+  defaultOffset: 1.4,
   fitGain: false,
-  calibrationWeight: 0.5,
+  calibrationWeight: 0,
   optimalShare: 0.8,
 }
 
