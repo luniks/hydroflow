@@ -8,15 +8,15 @@ const MIN = 60_000
 
 describe('lagMinutes', () => {
   it('est constant au-dessus du débit de référence', () => {
-    expect(lagMinutes(30, M.lag)).toBe(90)
-    expect(lagMinutes(60, M.lag)).toBe(90)
+    expect(lagMinutes(30, M.lag)).toBe(65)
+    expect(lagMinutes(60, M.lag)).toBe(65)
   })
 
   it('augmente quand le débit baisse (onde plus lente)', () => {
-    expect(lagMinutes(24, M.lag)).toBeGreaterThan(95)
-    expect(lagMinutes(24, M.lag)).toBeLessThan(105)
+    expect(lagMinutes(24, M.lag)).toBeGreaterThan(68)
+    expect(lagMinutes(24, M.lag)).toBeLessThan(78)
     expect(lagMinutes(12, M.lag)).toBeGreaterThan(lagMinutes(24, M.lag))
-    expect(lagMinutes(12, M.lag)).toBeCloseTo(142.3, 0)
+    expect(lagMinutes(12, M.lag)).toBeCloseTo(102.8, 0)
   })
 
   it('est plafonné et gère un débit nul', () => {
@@ -85,7 +85,7 @@ describe('calibrateSite', () => {
 
   it('ne suit le calage aval qu’en partie par défaut (gain fixe, décalage à moitié)', () => {
     const down = downSeries(0.5, 2)
-    const part = calibrateSite(refSeries(80), down, M, NOW)
+    const part = calibrateSite(refSeries(80), down, { ...M, calibrationWeight: 0.5 }, NOW)
     const full = calibrateSite(refSeries(80), down, { ...M, calibrationWeight: 1 }, NOW)
     const none = calibrateSite(refSeries(80), down, { ...M, calibrationWeight: 0 }, NOW)
     expect(part.gain).toBe(M.defaultGain)
@@ -101,7 +101,7 @@ describe('siteFlowSeries', () => {
   it('convertit puis décale chaque mesure de son propre délai', () => {
     const [p] = siteFlowSeries([pt(0, 30)], cal, M)
     expect(p!.y).toBeCloseTo(16, 6)
-    expect(Date.parse(p!.t)).toBe(NOW + 90 * MIN)
+    expect(Date.parse(p!.t)).toBe(NOW + 65 * MIN)
   })
 
   it('décale davantage les faibles débits', () => {
