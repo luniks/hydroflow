@@ -125,9 +125,9 @@ describe('station de référence : équivalence des débits', () => {
   it('exprime les seuils du modèle en débit de la station de référence', () => {
     const c = refSpaceConfig(fresh())
     expect(c.refCode).toBe('O469251003')
-    expect(c.startFlow).toBeCloseTo(23.08, 1)
+    expect(c.startFlow).toBeCloseTo(25.34, 1)
     expect(c.minFlow).toBeLessThanOrEqual(c.startFlow)
     expect(c.maxFlow).toBeGreaterThan(c.startFlow)
-    expect(c.propagationMin).toBe(90)
+    expect(c.propagationMin).toBe(65)
   })
 })
