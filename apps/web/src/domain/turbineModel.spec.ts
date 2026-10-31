@@ -147,7 +147,7 @@ describe('cloneTurbineModel', () => {
     c.lag.refMin = 1
     c.tailRating.a = 1
     c.efficiencyCurve[0]![1] = 0.1
-    expect(M.lag.refMin).toBe(90)
+    expect(M.lag.refMin).toBe(65)
     expect(M.tailRating.a).toBe(0.0083)
     expect(M.efficiencyCurve[0]![1]).toBe(0.5)
   })

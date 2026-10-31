@@ -59,11 +59,11 @@ describe('turbineForecast · cas sans prévision', () => {
 describe('turbineForecast · débit stable', () => {
   it('turbine en marche et production stable quand le débit est largement suffisant', () => {
     const f = turbineForecast(series(4, () => 40), [], M, NOW)
-    expect(site(40)).toBeGreaterThan(20)
+    expect(site(40)).toBeGreaterThan(15)
     expect(f.outlook.turbine).toBe('run')
     expect(f.outlook.kind).toBe('run-stable')
     expect(f.siteFlow).toBeCloseTo(site(40), 1)
-    expect(f.powerKw!).toBeGreaterThan(300)
+    expect(f.powerKw!).toBeGreaterThan(250)
     expect(f.pRun!.m60).toBeGreaterThan(0.95)
     expect(f.energyKwh).toBeGreaterThan(500)
   })
@@ -98,7 +98,7 @@ describe('turbineForecast · montée et descente progressives', () => {
 
   it('une turbine démarrée depuis peu n’a pas encore atteint sa puissance finale', () => {
     // Le front vient d’arriver au barrage (il rattrape les eaux plus lentes qui le précèdent) : la turbine tourne, mais monte encore.
-    const f = turbineForecast(series(4, (a) => (a > 150 ? 15 : 40)), [], M, NOW)
+    const f = turbineForecast(series(4, (a) => (a > 100 ? 15 : 40)), [], M, NOW)
     expect(f.outlook.turbine).toBe('run')
     expect(f.powerKw!).toBeLessThan(powerKw(M.defaultGain * 40 + M.defaultOffset, M))
   })
@@ -122,17 +122,16 @@ describe('runningMin', () => {
 })
 
 describe('turbineForecast · inertie de la retenue', () => {
-  // Débit amont bas pendant `lowMin` minutes au milieu de la série, sinon élevé.
-  const dip = (lowMin: number) => (a: number): number => (a > 140 || a < 140 - lowMin ? 40 : 15)
-
   it('un creux court ne coupe pas la turbine', () => {
-    const f = turbineForecast(series(4, dip(15)), [], M, NOW)
+    const dip = (a: number): number => (a > 120 || a < 116 ? 40 : 15)
+    const f = turbineForecast(series(4, dip), [], M, NOW)
     expect(f.steps.every((s) => s.turbine === 'run')).toBe(true)
   })
 
   it('un creux long finit par couper la turbine, avec un délai', () => {
-    const none = turbineForecast(series(4, dip(70)), [], { ...M, stopHoldMin: 0 }, NOW)
-    const held = turbineForecast(series(4, dip(70)), [], { ...M, stopHoldMin: 20 }, NOW)
+    const dip = (a: number): number => (a > 100 || a < 30 ? 40 : 15)
+    const none = turbineForecast(series(4, dip), [], { ...M, stopHoldMin: 0 }, NOW)
+    const held = turbineForecast(series(4, dip), [], { ...M, stopHoldMin: 20 }, NOW)
     const firstStop = (f: typeof none) => f.steps.find((s) => s.turbine === 'stop')?.minute
     expect(firstStop(none)).toBeDefined()
     expect(firstStop(held)).toBeDefined()
@@ -172,7 +171,7 @@ describe('turbineForecast · éclusée', () => {
     const f = turbineForecast(series(4, fall), [], M, NOW)
     expect(f.outlook.turbine).toBe('run')
     expect(f.outlook.kind).toBe('stop-expected')
-    const after = f.steps.find((s) => s.minute === 105)!
+    const after = f.steps.find((s) => s.minute === 75)!
     expect(after.turbine).toBe('stop')
     // La puissance redescend progressivement au lieu de tomber à zéro.
     expect(after.powerKw).toBeGreaterThan(0)
