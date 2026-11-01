@@ -108,13 +108,13 @@ Le débit de réserve est prélevé d'abord ; la turbine ne démarre que si son 
 
 $$ q_{start} = q_{res} + r_{start}\,Q_{max} = 5{,}5 + 0{,}3 \times 23{,}5 = 12{,}55\ \text{m}^3/\text{s} $$
 
-Soit un débit turbiné de $0{,}3 \times 23{,}5 = 7{,}05$ m³/s (« autour de 7 » sur le terrain). Le seuil d'arrêt est calculé de la même façon avec `stopRatio` (aujourd'hui égal à `startRatio` : pas d'hystérésis de débit).
+Soit un débit turbiné de $0{,}3 \times 23{,}5 = 7{,}05$ m³/s (« autour de 7 » sur le terrain). Le seuil d'arrêt est calculé de la même façon avec `stopRatio` = 0,26 : $5{,}5 + 0{,}26 \times 23{,}5 = 11{,}61$ m³/s (hystérésis de ~1 m³/s, relevée sur le cycle du 31/10, voir [`validation-2026-10-31.md`](validation-2026-10-31.md)).
 
-À ce seuil, le modèle donne environ **117 kW** ($\eta=0{,}5$, $H\approx3{,}38$ m), cohérent avec les ~100 kW observés au démarrage.
+Au seuil de démarrage, le modèle donne environ **64 kW** ($\eta=0{,}285$) et environ 22 kW au seuil d'arrêt. Les démarrages réels affichent ~100 kW en transitoire (saut initial puis rampe) : le régime établi interpolé donne moins.
 
 ### 4.2 Arrêt en crue
 
-Quand le débit monte, la chute brute diminue (le niveau aval monte). Sous `headMin` = 1,5 m la turbine s'arrête : cela correspond à $q \approx 97$ m³/s (`maxSiteFlow`, résolu par dichotomie).
+Quand le débit monte, la chute brute diminue (le niveau aval monte). Sous `headMin` = 1,5 m la turbine s'arrête : cela correspond à $q \approx 62$ m³/s (`maxSiteFlow`, résolu par dichotomie ; **extrapolé** au-delà de 21 m³/s, dernier point de chute mesuré).
 
 ### 4.3 Machine à états
 
@@ -122,7 +122,7 @@ Quand le débit monte, la chute brute diminue (le niveau aval monte). Sous `head
 stateDiagram-v2
     [*] --> Arret
     Arret --> Marche : q ≥ 12,55 ET H ≥ 1,5 m
-    Marche --> Arret : q < 12,55 (après tenue) OU H < 1,5 m
+    Marche --> Arret : q < 11,61 (après tenue) OU H < 1,5 m
     note right of Marche
         Tenue (stopHoldMin = 4 min) : un creux sous le seuil
         plus court que la tenue n'arrête pas la turbine,
@@ -130,7 +130,7 @@ stateDiagram-v2
     end note
 ```
 
-**Tenue (`rideThrough`)** : la retenue amortit les creux courts. Pendant `stopHoldMin` minutes après le début d'un creux sous 12,55, le débit est relevé au seuil d'arrêt ; au-delà, la turbine s'arrête. Valeur actuelle : 4 min.
+**Tenue (`rideThrough`)** : la retenue amortit les creux courts. Pendant `stopHoldMin` minutes après le début d'un creux sous 11,61, le débit est relevé au seuil d'arrêt ; au-delà, la turbine s'arrête. Valeur actuelle : 4 min.
 
 L'état initial vient du rejeu de la série (`turbineOutlook` / `inferTurbineState`).
 
@@ -148,22 +148,24 @@ avec la charge $c = Q_t / Q_{max}$. $P = 0$ si $q<q_{stop}$ ou si $H<H_{min}$.
 
 Le rendement global (turbine + génératrice) croît avec la charge ; interpolation linéaire entre les points :
 
-| Charge $c$ | 0,30 | 0,41 | 1,00 |
-|---|---|---|---|
-| $\eta$ | 0,50 | 0,65 | 0,66 |
+| Charge $c$ | 0,26 | 0,30 | 0,362 | 0,515 | 0,657 | 1,00 |
+|---|---|---|---|---|---|---|
+| $\eta$ | 0,11 | 0,285 | 0,549 | 0,742 | 0,796 | 0,69 |
 
-(constant à 0,50 sous $c=0{,}3$.) Calage : ~100-115 kW observés à 30 % de charge, ~200 kW à 40 %.
+(constant à 0,11 sous $c=0{,}26$.) Calage sur les relevés SCADA du 31/10 (débit turbiné, puissance et chute brute lus ensemble) : 0,549 à $c=0{,}362$, 0,742 à 0,515 et 0,796 à 0,657 sont mesurés ; 0,11 à 0,26 vient de la fin de cycle (régime transitoire) et 0,285 à 0,30 est interpolé ; **0,69 à $c=1$ est extrapolé** des pics du 30/10. Détail dans [`validation-2026-10-31.md`](validation-2026-10-31.md).
 
 ### 5.3 Chute brute
 
 $$ H(q) = \min\Bigl(H_0 - \max\bigl(0,\; h_{aval}(q) - h_{ref}\bigr) - \delta,\; H_{max}\Bigr) $$
 
 - $H_0 = (\text{poolLowCm} - \text{tailLowCm})/100 = (-30 - (-380))/100 = 3{,}5$ m : chute à débit faible. Le niveau amont est supposé constant.
-- $h_{aval}(q) = a\,q^{b}$ avec $a = 0{,}0083$, $b = 1{,}2035$ (courbe de tarage de la station aval) ; $h_{ref}$ = `tailRefLevel` = 0,05 m.
+- $h_{aval}(q) = a\,q^{b}$ avec $a = 0{,}035$, $b = 1$ (remontée du niveau aval au barrage, ajustée sur les chutes brutes lues au SCADA le 31/10) ; $h_{ref}$ = `tailRefLevel` = 0,18 m.
 - $\delta$ = `headCorrection` = 0 (voir §9, point ouvert).
 - $H_{max} = 3{,}5$ m.
 
-Ordre de grandeur : $H = 3{,}38$ m à 12,5 m³/s, 3,07 m à 29 m³/s, 2,4 m à 60 m³/s. Les « chute nette » lues sur le SCADA (3,36 à 3,40 m) sont dans cet ordre.
+Ordre de grandeur : $H = 3{,}24$ m à 12,5 m³/s, 3,07 m à 17,5 m³/s, 2,94 m à 21 m³/s, 2,67 m à 29 m³/s, 1,58 m à 60 m³/s (extrapolé au-delà de 21). Les chutes brutes lues au SCADA le 31/10 sont à moins de 0,05 m de ce modèle entre 6 et 21 m³/s.
+
+> Les figures 1, 2 et 6 ont été tracées avec le jeu de paramètres précédent et n'ont pas été régénérées ; voir la figure 8 de [`validation-2026-10-31.md`](validation-2026-10-31.md) pour la courbe de rendement et la chute actuelles.
 
 ![Rendement, chute et tarage aval](img/fig2_rendement_chute.png)
 
@@ -171,13 +173,12 @@ Ordre de grandeur : $H = 3{,}38$ m à 12,5 m³/s, 3,07 m à 29 m³/s, 2,4 m à 6
 
 ![Courbe de puissance P(q)](img/fig1_courbe_puissance.png)
 
-Trois régimes :
+Deux régimes :
 
-1. **12,55 → ~28 m³/s** : la puissance monte avec le débit turbiné (de ~117 à 450 kW).
-2. **28 → 34,5 m³/s** : plafond à 450 kW (nominal).
-3. **> 34,5 m³/s** : le débit turbiné est plafonné à 23,5, mais la chute baisse avec la montée du niveau aval, donc la puissance **diminue** (433 kW à 40 m³/s, 366 kW à 60) jusqu'à l'arrêt en crue (~97 m³/s).
+1. **12,55 → ~29 m³/s** : la puissance monte avec le débit turbiné (de ~64 à ~424 kW) ; le rendement mesuré croît jusqu'à ~0,80 vers 66 % de charge.
+2. **> 29 m³/s** : le débit turbiné est plafonné à 23,5 m³/s, mais la chute baisse avec la montée du niveau aval, donc la puissance **diminue** (363 kW à 40 m³/s, 307 kW à 50) jusqu'à l'arrêt en crue (~62 m³/s, extrapolé). La puissance nominale de 450 kW n'est jamais atteinte avec le jeu actuel ; le pic mesuré le 30/10 est de ~420 kW.
 
-La **zone optimale** (`optimalShare` = 80 % du nominal, soit ≥ 360 kW) s'étend de 23,3 à 61,6 m³/s au barrage.
+La **zone optimale** (`optimalShare` = 80 % du nominal, soit ≥ 360 kW) s'étend de 21,6 à 40,3 m³/s au barrage.
 
 ---
 
@@ -233,17 +234,17 @@ Prévision émise le 29/10 à 19h00 UTC :
 | `refCode` / `downCode` | O469251003 / O480252002 | Stations amont et aval |
 | `reserveFlow` | 5,5 m³/s | Passe à poissons + surverse, prélevé en premier |
 | `maxTurbineFlow` | 23,5 m³/s | Capacité turbinée (hors réserve) |
-| `startRatio` / `stopRatio` | 0,3 / 0,3 | Seuils en part de la capacité (→ 12,55 m³/s) |
+| `startRatio` / `stopRatio` | 0,3 / 0,26 | Seuils en part de la capacité (→ 12,55 / 11,61 m³/s) |
 | `ratedPowerKw` | 450 kW | Puissance nominale |
 | `stopHoldMin` | 4 min | Tenue d'un creux sous le seuil |
-| `rampKwPerMin` | 6 kW/min | Vitesse de montée/descente |
+| `rampKwPerMin` | 12 kW/min | Vitesse de montée/descente (montées observées 10–15, descentes 8–12 kW/min) |
 | `efficiency` | 0,65 | Rendement constant, utilisé seulement si la courbe est vide |
-| `efficiencyCurve` | [0,3 ; 0,5], [0,41 ; 0,65], [1 ; 0,66] | Rendement selon la charge |
+| `efficiencyCurve` | [0,26 ; 0,11], [0,3 ; 0,285], [0,362 ; 0,549], [0,515 ; 0,742], [0,657 ; 0,796], [1 ; 0,69] | Rendement selon la charge |
 | `headMin` / `headMax` | 1,5 / 3,5 m | Plage de chute de fonctionnement |
 | `poolLowCm` / `tailLowCm` | −30 / −380 cm | Repères de niveaux → $H_0 = 3{,}5$ m |
-| `tailRefLevel` | 0,05 m | Niveau aval au repère `tailLowCm` |
+| `tailRefLevel` | 0,18 m | Niveau aval au repère `tailLowCm` |
 | `headCorrection` | 0 m | Correction de chute (définition non confirmée) |
-| `tailRating` | a = 0,0083, b = 1,2035 | Courbe de tarage aval |
+| `tailRating` | a = 0,035, b = 1 | Remontée du niveau aval en fonction du débit |
 | `lag` | refMin 65, refFlow 30, exposant 0,5, maxMin 150 | Délai de propagation |
 | `downLagRatio` | 17,73 / 15,35 | Rapport de distances aval/turbine |
 | `defaultGain` / `defaultOffset` | 0,44 / +1,4 | Conversion amont → barrage |
@@ -283,6 +284,10 @@ Le débit au barrage nécessaire pour retrouver la puissance mesurée n'est pas 
 - Les pics de **17h30 et 19h50** sont décalés ou aplatis (erreur de délai, ou de lecture graphique).
 - La validation repose sur **une seule journée**, avec un seul gros événement ; les débits amont au-delà de 43 m³/s n'ont pas été observés.
 
+> Les résultats de cette section (29/10) ont été obtenus avec le jeu de paramètres précédent.
+
+Autres journées de validation : [`validation-2026-10-30.md`](validation-2026-10-30.md) (modèle précédent) et [`validation-2026-10-31.md`](validation-2026-10-31.md) (relevés SCADA et nouveaux paramètres).
+
 ---
 
 ## 9. Hypothèses, limites et points ouverts
@@ -291,16 +296,17 @@ Le débit au barrage nécessaire pour retrouver la puissance mesurée n'est pas 
 - Niveau amont supposé constant (la chute ne varie qu'avec le niveau aval).
 - Rendement dépendant de la seule charge (pas de la chute ni de la température).
 - Relation débit amont → barrage linéaire, constante dans le temps (le calage glissant est désactivé).
-- Pas d'hystérésis sur les seuils de débit (démarrage = arrêt).
+- Hystérésis modérée sur les seuils de débit (démarrage à 12,55, arrêt à 11,61 m³/s) ; les démarrages réels à bas débit restent mal prévus.
 
 **Points à confirmer ou à décider**
 
-1. **Seuil de démarrage** : le démarrage réel semble se faire à un débit estimé légèrement inférieur à 12,55 m³/s. Faut-il distinguer `startRatio` et `stopRatio` (par exemple démarrer à 12,55 et s'arrêter à moins) ?
+1. **Seuil de démarrage** : le démarrage réel semble se faire à un débit estimé légèrement inférieur à 12,55 m³/s ; l'arrêt a été relevé à ~11,6 m³/s (31/10). Le seuil de démarrage reste à valider sur d'autres cycles.
 2. **`calibrationWeight`** : 0 (valeurs fixes) ou une valeur partielle (0,2–0,5) pour absorber les changements de régime, à trancher après validation sur d'autres journées.
 3. **`headCorrection`** : sa définition n'est pas confirmée ; elle vaut 0 aujourd'hui.
 4. **Régime réduit** (`reducedPowerKw`, `reducedMin`) : le conserver désactivé ou le supprimer ?
-5. **Convention d'heure du SCADA** : UTC+2 supposé, à confirmer.
-6. **Sources de calage** : les valeurs de rendement viennent de relevés à 30 et 40 % de charge ; aucun point au-delà de 41 % n'est mesuré (le 0,65–0,66 est une hypothèse).
+5. **Convention d'heure du SCADA** : mesurée à UTC+2h08m11s sur les 30 et 31/10 (+1h08m11s sur l'heure de Paris), alors que la validation du 29/10 supposait UTC+2.
+6. **Sources de calage** : rendement mesuré entre 36 et 66 % de charge (relevés du 31/10) ; au-delà de 66 % (0,69 à pleine charge) et pour la chute au-delà de 21 m³/s, les valeurs sont extrapolées. Il manque des relevés SCADA au-dessus de 22 m³/s.
+7. **Gain amont → barrage** : non modifié (0,44 / +1,4). Les stations montrent `aval ≈ 0,68·amont(t−95 min) − 4,4` sur les 30 et 31/10, mais appliquer ce gain augmente l'énergie simulée du 30/10 de 16 % : à trancher.
 
 ---
 
@@ -326,13 +332,13 @@ pour minute = 0, 5, …, 120 :
 | Grandeur | Valeur |
 |---|---|
 | Débit turbiné au démarrage | 7,05 m³/s |
-| Débit au barrage au démarrage / arrêt | 12,55 m³/s |
-| Puissance au démarrage | ≈ 117 kW |
-| Débit au barrage à pleine charge (450 kW) | ≈ 28 m³/s (plateau jusqu'à 34,5) |
-| Zone optimale (≥ 360 kW) | 23,3 – 61,6 m³/s |
-| Débit d'arrêt en crue ($H<1{,}5$ m) | ≈ 97 m³/s |
+| Débit au barrage au démarrage / arrêt | 12,55 / 11,61 m³/s |
+| Puissance au démarrage / à l'arrêt | ≈ 64 kW / ≈ 22 kW |
+| Puissance maximale du modèle | ≈ 424 kW vers 29 m³/s (la puissance nominale de 450 kW n'est pas atteinte) |
+| Zone optimale (≥ 360 kW) | 21,6 – 40,3 m³/s |
+| Débit d'arrêt en crue ($H<1{,}5$ m) | ≈ 62 m³/s (extrapolé) |
 | Débit amont équivalent au seuil de démarrage | ≈ 25 m³/s |
-| Rampe max par pas de 5 min | 30 kW |
+| Rampe max par pas de 5 min | 60 kW |
 
 ## Annexe C — Fichiers de code
 

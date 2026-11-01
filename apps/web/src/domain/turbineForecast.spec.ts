@@ -140,8 +140,9 @@ describe('turbineForecast · inertie de la retenue', () => {
 })
 
 describe('turbineForecast · éclusée', () => {
-  // Débit amont bas (15 m³/s) qui monte à 40 m³/s entre il y a 30 et il y a 10 minutes : le front arrive à la turbine dans ~1 h.
-  const rise = (minAgo: number): number => (minAgo > 30 ? 15 : minAgo < 10 ? 40 : 15 + (25 * (30 - minAgo)) / 20)
+  // Débit amont bas (15 m³/s) qui monte à 32 m³/s entre il y a 30 et il y a 10 minutes : le front arrive à la turbine dans ~1 h.
+  // (Une hausse plus forte, extrapolée, dépasserait le débit de crue où la turbine s'arrête.)
+  const rise = (minAgo: number): number => (minAgo > 30 ? 15 : minAgo < 10 ? 32 : 15 + (17 * (30 - minAgo)) / 20)
 
   it('annonce le démarrage avant que la turbine ne tourne', () => {
     const f = turbineForecast(series(4, rise), [], M, NOW)
@@ -168,7 +169,8 @@ describe('turbineForecast · éclusée', () => {
 
   it('annonce l’arrêt à la décrue', () => {
     const fall = (minAgo: number): number => (minAgo > 30 ? 40 : minAgo < 10 ? 15 : 40 - (25 * (30 - minAgo)) / 20)
-    const f = turbineForecast(series(4, fall), [], M, NOW)
+    // Rampe lente fixée ici (6 kW/min) pour observer la décroissance sur le pas de 75 min.
+    const f = turbineForecast(series(4, fall), [], { ...M, rampKwPerMin: 6 }, NOW)
     expect(f.outlook.turbine).toBe('run')
     expect(f.outlook.kind).toBe('stop-expected')
     const after = f.steps.find((s) => s.minute === 75)!
