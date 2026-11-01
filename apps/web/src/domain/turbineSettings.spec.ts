@@ -102,9 +102,9 @@ describe('turbinePreview', () => {
   it('résume le démarrage, le débit de crue et la puissance à pleine capacité', () => {
     const p = turbinePreview(fresh())
     expect(p.startFlow).toBeCloseTo(12.55, 2)
-    expect(p.stopFlow).toBeCloseTo(12.55, 2)
-    expect(p.maxFlow).toBeGreaterThan(80)
-    expect(p.maxFlow).toBeLessThan(120)
+    expect(p.stopFlow).toBeCloseTo(11.61, 2)
+    expect(p.maxFlow).toBeGreaterThan(50)
+    expect(p.maxFlow).toBeLessThan(80)
     expect(p.fullPowerKw).toBeGreaterThan(400)
     expect(p.fullPowerKw).toBeLessThanOrEqual(450)
   })

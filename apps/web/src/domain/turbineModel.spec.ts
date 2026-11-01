@@ -16,9 +16,9 @@ import {
 } from './turbineModel'
 
 describe('turbineModel · débits', () => {
-  it('le débit de réserve s’ajoute au débit turbiné : démarrage à 5,5 + 30 % de 23,5', () => {
+  it('le débit de réserve s’ajoute au débit turbiné : démarrage à 5,5 + 30 % de 23,5, arrêt à 5,5 + 26 % de 23,5', () => {
     expect(startFlowOf(M)).toBeCloseTo(12.55, 2)
-    expect(stopFlowOf(M)).toBeCloseTo(12.55, 2)
+    expect(stopFlowOf(M)).toBeCloseTo(11.61, 2)
   })
 
   it('préleve la réserve en premier et plafonne à la capacité', () => {
@@ -47,8 +47,9 @@ describe('turbineModel · chute', () => {
   it('le débit maximum est celui où la chute atteint le minimum', () => {
     const q = maxSiteFlow(M)
     expect(grossHead(q, M)).toBeCloseTo(M.headMin, 2)
-    expect(q).toBeGreaterThan(80)
-    expect(q).toBeLessThan(120)
+    // Extrapolé au-delà de 21 m³/s (derniers relevés SCADA de la chute) : voir docs/validation-2026-10-31.md.
+    expect(q).toBeGreaterThan(50)
+    expect(q).toBeLessThan(80)
   })
 })
 
@@ -59,12 +60,20 @@ describe('turbineModel · puissance', () => {
 
   it('croît avec le débit puis plafonne à la puissance nominale', () => {
     expect(powerKw(15, M)).toBeGreaterThan(powerKw(13, M))
-    expect(powerKw(29, M)).toBe(450)
-    expect(powerKw(40, M)).toBeLessThanOrEqual(450)
+    expect(powerKw(29, M)).toBeGreaterThan(400)
+    expect(powerKw(29, M)).toBeLessThanOrEqual(450)
+    expect(powerKw(29, { ...M, ratedPowerKw: 300 })).toBe(300)
   })
 
-  it('retrouve ~200 kW pour ~9,7 m³/s turbinés (événement du 26/10)', () => {
-    expect(powerKw(5.5 + 9.7, M)).toBeGreaterThan(180)
+  it('retrouve les relevés SCADA du 31/10 (débit turbiné + 5,5 m³/s) à 3 % près', () => {
+    // [débit au barrage, puissance mesurée] : lots 5, 1, 4, 2 et 3.
+    for (const [q, kw] of [[14.0, 145], [17.5, 269], [17.7, 271], [20.8, 353], [21.1, 358]] as const) {
+      expect(Math.abs(powerKw(q, M) / kw - 1)).toBeLessThan(0.03)
+    }
+  })
+
+  it('reste dans la fourchette de l’événement du 26/10 (~200 kW pour ~9,7 m³/s turbinés)', () => {
+    expect(powerKw(5.5 + 9.7, M)).toBeGreaterThan(150)
     expect(powerKw(5.5 + 9.7, M)).toBeLessThan(230)
   })
 
@@ -76,20 +85,24 @@ describe('turbineModel · puissance', () => {
 
 describe('turbineModel · rendement', () => {
   it('interpole la courbe selon la charge et reste constant au-delà des extrémités', () => {
-    expect(efficiencyAt(0.1, M)).toBe(0.5)
-    expect(efficiencyAt(0.3, M)).toBeCloseTo(0.5, 6)
-    expect(efficiencyAt(0.41, M)).toBeCloseTo(0.65, 6)
-    expect(efficiencyAt(0.355, M)).toBeCloseTo(0.575, 6)
-    expect(efficiencyAt(1, M)).toBeCloseTo(0.66, 6)
+    expect(efficiencyAt(0.1, M)).toBe(0.11)
+    expect(efficiencyAt(0.3, M)).toBeCloseTo(0.285, 6)
+    expect(efficiencyAt(0.362, M)).toBeCloseTo(0.549, 6)
+    expect(efficiencyAt(0.657, M)).toBeCloseTo(0.796, 6)
+    expect(efficiencyAt(0.5, M)).toBeCloseTo(0.7231, 3)
+    expect(efficiencyAt(1, M)).toBeCloseTo(0.69, 6)
+    expect(efficiencyAt(1.2, M)).toBeCloseTo(0.69, 6)
   })
 
   it('utilise le rendement constant sans courbe', () => {
     expect(efficiencyAt(0.5, { ...M, efficiencyCurve: [], efficiency: 0.7 })).toBe(0.7)
   })
 
-  it('donne ~110 kW au démarrage (30 % de charge), comme l’exploitation', () => {
-    expect(powerKw(startFlowOf(M), M)).toBeGreaterThan(100)
-    expect(powerKw(startFlowOf(M), M)).toBeLessThan(125)
+  it('donne ~65 kW au seuil de démarrage (30 % de charge) et ~20 kW au seuil d’arrêt', () => {
+    // Les démarrages réels affichent ~100 kW en transitoire ; le régime établi interpolé donne moins.
+    expect(powerKw(startFlowOf(M), M)).toBeGreaterThan(50)
+    expect(powerKw(startFlowOf(M), M)).toBeLessThan(80)
+    expect(powerKw(stopFlowOf(M) + 0.01, M)).toBeLessThan(30)
   })
 })
 
@@ -148,7 +161,7 @@ describe('cloneTurbineModel', () => {
     c.tailRating.a = 1
     c.efficiencyCurve[0]![1] = 0.1
     expect(M.lag.refMin).toBe(65)
-    expect(M.tailRating.a).toBe(0.0083)
-    expect(M.efficiencyCurve[0]![1]).toBe(0.5)
+    expect(M.tailRating.a).toBe(0.035)
+    expect(M.efficiencyCurve[0]![1]).toBe(0.11)
   })
 })
