@@ -60,7 +60,7 @@ const ready = computed(() => props.points.filter((p) => rain.states[p.key]))
 <style scoped>
 .rain-group__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 14px;
 }
 </style>
