@@ -206,19 +206,26 @@ describe('StationCard', () => {
       expect(wrapper.findAllComponents(MetricValue)[1]!.props('line')).toMatchObject({ text: '▲ +40.00 cm/h' })
     })
 
-    it('signale l’âge d’une dernière mesure ancienne en direct, pas en navigation dans le passé', () => {
+    it('n’ajoute plus l’âge de la dernière mesure à l’indicateur', () => {
       const state = makeState({ flowPoints: rising(10, 12) }) // dernière mesure à 01:00
       const live = factory(state, false, { window: LIVE, nowMs: Date.parse('2026-10-01T02:20:00Z') })
-      expect(flowLine(live).text).toBe('▲ +2.00 m³/s/h · 1 h 20')
-      expect(flowLine(factory(state, false, { nowMs: Date.parse('2026-10-01T02:20:00Z') })).text).toBe('▲ +2.00 m³/s/h')
+      expect(flowLine(live).text).toBe('▲ +2.00 m³/s/h')
+    })
+  })
+
+  describe('libellé « Dernière mesure »', () => {
+    const state = () => makeState({ flowPoints: rising(10, 12), points: [] }) // dernière mesure à 01:00
+
+    it('en direct : âge de la mesure, date exacte en infobulle', () => {
+      const wrapper = factory(state(), false, { window: LIVE, nowMs: Date.parse('2026-10-01T02:20:00Z') })
+      const label = wrapper.find('.card__meta span')
+      expect(label.text()).toBe('Dernière mesure : il y a 1 h 20')
+      expect(label.attributes('title')).toMatch(/\d{2}\/\d{2}/)
     })
 
-    it('ne signale rien pour une mesure récente', () => {
-      const live = factory(makeState({ flowPoints: rising(10, 12) }), false, {
-        window: LIVE,
-        nowMs: Date.parse('2026-10-01T01:10:00Z'),
-      })
-      expect(flowLine(live).text).toBe('▲ +2.00 m³/s/h')
+    it('dans le passé : date de la mesure', () => {
+      const text = factory(state(), false, { nowMs: Date.parse('2026-10-01T02:20:00Z') }).find('.card__meta span').text()
+      expect(text).toMatch(/^Dernière mesure : \d{2}\/\d{2}/)
     })
   })
 

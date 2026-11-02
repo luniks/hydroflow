@@ -16,7 +16,7 @@ const githubIcon = computed(() => (theme.theme.value === "light" ? "https://cdn.
       aria-label="View this project on GitHub"
       >
       <img alt="GitHub" height="24" width="24" :src="githubIcon" />
-      <span class="text-base font-bold">HydroFlow <span class="ml-[5px] mr-[1px]">v</span>0.2</span>
+      <span class="text-base font-bold">HydroFlow <span class="ml-[5px] mr-[1px]">v</span>0.3</span>
     </a>
     <div class="footer-links flex items-center gap-2 flex-wrap justify-center">
       <span>Données ouvertes</span>

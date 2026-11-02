@@ -17,14 +17,11 @@ export interface TrendBand {
   down?: Crossing
 }
 
-/** Au-dela de cet age (min), la derniere mesure n'est plus « maintenant » et l'indicateur le dit. */
-export const TREND_STALE_MIN = 15
-
 /** Seuils d'une station ordinaire : sortir de la plage est a surveiller, y revenir est une bonne nouvelle. */
 export function stationBands(range: Range): TrendBand[] {
   return [
-    { value: range.low, up: { name: 'Retour', good: true }, down: { name: 'Bas', good: false } },
-    { value: range.high, up: { name: 'Haut', good: false }, down: { name: 'Retour', good: true } },
+    { value: range.low, up: { name: 'Nominal', good: true }, down: { name: 'Bas', good: false } },
+    { value: range.high, up: { name: 'Haut', good: false }, down: { name: 'Nominal', good: true } },
   ]
 }
 
@@ -52,8 +49,6 @@ interface LineOptions {
   bands: TrendBand[]
   /** Met en forme une pente par heure dans l'unite de la serie (ex. « +3.20 m³/s/h »). */
   formatRate: (ratePerHour: number) => string
-  /** Age (min) de la derniere mesure, `null` quand il n'a pas de sens (periode passee). */
-  ageMin: number | null
 }
 
 /**
@@ -102,9 +97,5 @@ export function stationLine(analysis: SeriesAnalysis, lastY: number, opts: LineO
     }
   }
 
-  if (opts.ageMin !== null && opts.ageMin > TREND_STALE_MIN) {
-    const age = fmtDuration(opts.ageMin)
-    return { ...line, text: `${line.text} · ${age}`, title: `${line.title}. Dernière mesure il y a ${age}` }
-  }
   return line
 }

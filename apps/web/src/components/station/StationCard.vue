@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { LEVEL_ANALYZE_OPTIONS, flowAnalyzeOptions } from '@/domain/constants'
-import { fmtDate, fmtLevel, fmtQ, fmtTrend, levelRateToCmPerHour, pluralize } from '@/domain/format'
+import { fmtDate, fmtDuration, fmtLevel, fmtQ, fmtTrend, levelRateToCmPerHour, pluralize } from '@/domain/format'
 import { mean, rangeStatus } from '@/domain/series'
 import { stationBands, stationLine, turbineBands } from '@/domain/stationTrend'
 import { analyzeSeries } from '@/domain/trend'
-import type { ExploitConfig, SeriesPoint, Station, StationState, Thresholds, TimeWindow } from '@/domain/types'
+import type { ExploitConfig, Station, StationState, Thresholds, TimeWindow } from '@/domain/types'
 import BaseBadge from '../ui/BaseBadge.vue'
 import BaseButton from '../ui/BaseButton.vue'
 import BaseIcon from '../ui/BaseIcon.vue'
@@ -49,13 +49,6 @@ const lastFlow = computed(() => props.state.flowPoints.at(-1)?.y ?? null)
 
 const lastLevel = computed(() => props.state.points.at(-1)?.y ?? null)
 
-/** Age (min) de la derniere mesure ; sans objet en navigation dans le passe. */
-function ageMin(points: SeriesPoint[]): number | null {
-  const last = points.at(-1)
-  if (!last || props.window.dateFin) return null
-  return Math.max(0, (props.nowMs - Date.parse(last.t)) / 60_000)
-}
-
 // Mesure principale (debit, sinon niveau) : la ligne annonce le prochain seuil franchi. Station de reference :
 // seuils d'exploitation. L'autre mesure garde une ligne simple.
 const flowBands = computed(() =>
@@ -67,7 +60,6 @@ const flowLine = computed(() =>
     : stationLine(analyzeSeries(props.state.flowPoints, flowAnalyzeOptions(lastFlow.value)), lastFlow.value, {
         bands: flowBands.value,
         formatRate: (r) => fmtTrend(r, 'm³/s/h'),
-        ageMin: ageMin(props.state.flowPoints),
       }),
 )
 const levelLine = computed(() =>
@@ -76,7 +68,6 @@ const levelLine = computed(() =>
     : stationLine(analyzeSeries(props.state.points, LEVEL_ANALYZE_OPTIONS), lastLevel.value, {
         bands: lastFlow.value === null ? stationBands(props.thresholds.level) : [],
         formatRate: (r) => fmtTrend(levelRateToCmPerHour(r), 'cm/h'),
-        ageMin: ageMin(props.state.points),
       }),
 )
 
@@ -92,6 +83,13 @@ const flowStatusTitle = computed(() =>
 )
 
 const lastMeasure = computed(() => props.state.points.at(-1)?.t ?? props.state.flowPoints.at(-1)?.t)
+
+/** En direct : age de la derniere mesure (« il y a 1 h 20 »), la date exacte est dans l'infobulle. Dans le passe : la date. */
+const lastMeasureText = computed(() => {
+  if (!lastMeasure.value || props.window.dateFin) return fmtDate(lastMeasure.value)
+  const ageMin = Math.max(0, (props.nowMs - Date.parse(lastMeasure.value)) / 60_000)
+  return ageMin < 1 ? 'à l’instant' : `il y a ${fmtDuration(ageMin)}`
+})
 
 const countLabel = computed(() => {
   const n = props.state.points.length || props.state.flowPoints.length
@@ -202,7 +200,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
     </div>
 
     <p class="card__meta">
-      <span>Dernière mesure : {{ fmtDate(lastMeasure) }}</span>
+      <span :title="fmtDate(lastMeasure)">Dernière mesure : {{ lastMeasureText }}</span>
       <span>{{ countLabel }}</span>
     </p>
 
