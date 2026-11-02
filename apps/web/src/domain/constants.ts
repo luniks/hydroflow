@@ -127,7 +127,7 @@ export const RANGES = [
   { label: '30j', longLabel: 'Derniers 30 jours', hours: 720 },
 ] as const
 
-export const DEFAULT_RANGE_HOURS = 24
+export const DEFAULT_RANGE_HOURS = 3
 export const MAX_CHART_POINTS = 800
 export const MAX_PAGES = 12
 export const REQUEST_TIMEOUT_MS = 20_000
@@ -152,6 +152,7 @@ export const LEVEL_ANALYZE_OPTIONS: AnalyzeOptions = {
 }
 
 export const AUTO_REFRESH_OPTIONS = [0, 5, 10, 30] as const
+export const DEFAULT_AUTO_REFRESH_MIN = 30
 
 export const STORAGE_KEYS = {
   stations: 'custom_stations_v2',

@@ -20,7 +20,7 @@ const refreshTick = ref(0)
 const offsetSteps = ref(0)
 
 export function useTimeRange() {
-  const range = computed(() => RANGES.find((r) => r.hours === hours.value) ?? RANGES[2])
+  const range = computed(() => RANGES.find((r) => r.hours === hours.value) ?? RANGES.find((r) => r.hours === DEFAULT_RANGE_HOURS) ?? RANGES[1])
   const isLive = computed(() => offsetSteps.value === 0)
   const window = computed(() => {
     void refreshTick.value

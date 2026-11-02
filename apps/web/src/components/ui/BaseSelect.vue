@@ -57,6 +57,10 @@ function onChange(e: Event) {
 }
 
 .ui-select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
   height: 34px;
   padding: 0 8px;
   background: var(--bg);
@@ -78,8 +82,8 @@ function onChange(e: Event) {
 
 @media (max-width: 640px) {
   .ui-select {
-    height: 40px;
-    font-size: 16px;
+    height: 38px;
+    font-size: 15px;
   }
 }
 </style>

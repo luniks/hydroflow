@@ -204,6 +204,10 @@ const advancedCollapsed = ref(true)
   gap: 14px;
 }
 
+.cfg-grid  > * {
+  min-width: 0;
+}
+
 .cfg-preview__list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { GIROUSSENS, LAVAUR_3H, VIELMUR_NIVEAU } from '@/test/realSeries'
 import { flowAnalyzeOptions, LEVEL_ANALYZE_OPTIONS } from './constants'
 import { fmtTrend } from './format'
-import { stationBands, stationLine, TREND_STALE_MIN, turbineBands, type TrendBand } from './stationTrend'
+import { stationBands, stationLine, turbineBands, type TrendBand } from './stationTrend'
 import { analyzeSeries } from './trend'
 import type { SeriesAnalysis, SeriesPoint } from './types'
 
@@ -27,7 +27,7 @@ const flatAnalysis = (stableMin: number | null): SeriesAnalysis => ({
 const upTo = (points: SeriesPoint[], hhmm: string) =>
   points.filter((p) => Date.parse(p.t) <= Date.parse(`2026-10-21T${hhmm}:00Z`))
 const lastOf = (p: SeriesPoint[]) => p[p.length - 1]!.y
-const opts = (bands: TrendBand[], ageMin: number | null = null) => ({ bands, formatRate: flowRate, ageMin })
+const opts = (bands: TrendBand[]) => ({ bands, formatRate: flowRate })
 /** Cinq seuils (arret 20 · demarrage 30 · optimal 45-135 · crue 150) : de quoi tester le moteur sur plusieurs franchissements. */
 const EXPLOIT: TrendBand[] = [
   { value: 20, up: { name: 'Marche', good: true }, down: { name: 'Arrêt', good: false } },
@@ -40,8 +40,8 @@ const EXPLOIT: TrendBand[] = [
 describe('bandes de seuils', () => {
   it('une station ordinaire : sortir de la plage est à surveiller, y revenir est bon', () => {
     const [low, high] = stationBands({ low: 5, high: 20 })
-    expect(low).toMatchObject({ value: 5, down: { name: 'Bas', good: false }, up: { name: 'Retour', good: true } })
-    expect(high).toMatchObject({ value: 20, up: { name: 'Haut', good: false }, down: { name: 'Retour', good: true } })
+    expect(low).toMatchObject({ value: 5, down: { name: 'Bas', good: false }, up: { name: 'Nominal', good: true } })
+    expect(high).toMatchObject({ value: 20, up: { name: 'Haut', good: false }, down: { name: 'Nominal', good: true } })
   })
 })
 
@@ -69,15 +69,14 @@ describe('stationLine · mesures réelles', () => {
     expect(line.title).toMatch(/^Stable depuis \d+ min$/)
   })
 
-  it('Vielmur : la remontée est donnée en cm/h, avec l’âge de la dernière mesure quand il est ancien', () => {
+  it('Vielmur : la remontée est donnée en cm/h, sans âge de la dernière mesure', () => {
     const a = analyzeSeries(VIELMUR_NIVEAU, LEVEL_ANALYZE_OPTIONS)
     const line = stationLine(a, lastOf(VIELMUR_NIVEAU), {
       bands: [],
       formatRate: (r) => fmtTrend(r * 100, 'cm/h'),
-      ageMin: 79,
     })
-    expect(line.text).toMatch(/^▲ \+4\.\d\d cm\/h · 1 h 19$/)
-    expect(line.title).toContain('Dernière mesure il y a 1 h 19')
+    expect(line.text).toMatch(/^▲ \+4\.\d\d cm\/h$/)
+    expect(line.title).not.toContain('Dernière mesure')
   })
 })
 
@@ -107,7 +106,7 @@ describe('stationLine · franchissement du prochain seuil', () => {
   it('station ordinaire : sortie de plage à surveiller, retour dans la plage bon', () => {
     const bands = stationBands({ low: 5, high: 20 })
     expect(stationLine(moving(2), 18, opts(bands))).toMatchObject({ text: '▲ Haut ~1 h', tone: 'warn' })
-    expect(stationLine(moving(-3), 22, opts(bands))).toMatchObject({ text: '▼ Retour ~40 min', tone: 'ok' })
+    expect(stationLine(moving(-3), 22, opts(bands))).toMatchObject({ text: '▼ Nominal ~40 min', tone: 'ok' })
     expect(stationLine(moving(-1), 6, opts(bands))).toMatchObject({ text: '▼ Bas ~1 h', tone: 'warn' })
   })
 
@@ -137,21 +136,6 @@ describe('stationLine · sans seuil proche', () => {
     const line = stationLine(moving(-1.5, { windowMin: null, method: 'legacy' }), 10, opts(bands))
     expect(line.text).toBe('▼ -1.50 m³/s/h')
     expect(line.title).toBe('-1.50 m³/s/h')
-  })
-})
-
-describe('stationLine · fraîcheur', () => {
-  const bands = stationBands({ low: 5, high: 20 })
-
-  it('signale une dernière mesure ancienne', () => {
-    const line = stationLine(flatAnalysis(30), 10, opts(bands, 80))
-    expect(line.text).toBe('▬ stable 30 min · 1 h 20')
-    expect(line.title).toBe('Stable depuis 30 min. Dernière mesure il y a 1 h 20')
-  })
-
-  it('ne dit rien d’une mesure récente, ni quand l’âge n’a pas de sens', () => {
-    expect(stationLine(flatAnalysis(30), 10, opts(bands, TREND_STALE_MIN)).text).toBe('▬ stable 30 min')
-    expect(stationLine(flatAnalysis(30), 10, opts(bands, null)).text).toBe('▬ stable 30 min')
   })
 })
 

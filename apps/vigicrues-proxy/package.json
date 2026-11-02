@@ -1,7 +1,7 @@
 {
   "name": "@hydroflow/vigicrues-proxy",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Proxy CORS + cache pour l'API Vigicrues (InfoVigiCru.geojson)",
   "type": "module",
   "license": "GPLv3",
