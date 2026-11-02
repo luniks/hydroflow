@@ -1,8 +1,8 @@
 import { onScopeDispose, watch } from 'vue'
-import { AUTO_REFRESH_OPTIONS, STORAGE_KEYS } from '@/domain/constants'
+import { AUTO_REFRESH_OPTIONS, DEFAULT_AUTO_REFRESH_MIN, STORAGE_KEYS } from '@/domain/constants'
 import { useLocalStorage } from './useLocalStorage'
 
-const minutes = useLocalStorage<number>(STORAGE_KEYS.autoRefresh, 10, {
+const minutes = useLocalStorage<number>(STORAGE_KEYS.autoRefresh, DEFAULT_AUTO_REFRESH_MIN, {
   serialize: String,
   deserialize: (raw) => Number.parseInt(raw, 10),
   parse: (raw) =>
