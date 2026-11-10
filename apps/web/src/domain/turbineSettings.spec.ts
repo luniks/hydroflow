@@ -101,10 +101,10 @@ describe('validateTurbineModel', () => {
 describe('turbinePreview', () => {
   it('résume le démarrage, le débit de crue et la puissance à pleine capacité', () => {
     const p = turbinePreview(fresh())
-    expect(p.startFlow).toBeCloseTo(12.55, 2)
-    expect(p.stopFlow).toBeCloseTo(11.61, 2)
-    expect(p.maxFlow).toBeGreaterThan(50)
-    expect(p.maxFlow).toBeLessThan(80)
+    expect(p.startFlow).toBeCloseTo(11.49, 2)
+    expect(p.stopFlow).toBeCloseTo(11.375, 3)
+    expect(p.maxFlow).toBeGreaterThan(40)
+    expect(p.maxFlow).toBeLessThan(70)
     expect(p.fullPowerKw).toBeGreaterThan(400)
     expect(p.fullPowerKw).toBeLessThanOrEqual(450)
   })
@@ -112,7 +112,7 @@ describe('turbinePreview', () => {
   it('suit les réglages', () => {
     const m = fresh()
     m.reserveFlow = 4
-    expect(turbinePreview(m).startFlow).toBeCloseTo(11.05, 2)
+    expect(turbinePreview(m).startFlow).toBeCloseTo(9.99, 2)
   })
 })
 
@@ -125,7 +125,7 @@ describe('station de référence : équivalence des débits', () => {
   it('exprime les seuils du modèle en débit de la station de référence', () => {
     const c = refSpaceConfig(fresh())
     expect(c.refCode).toBe('O469251003')
-    expect(c.startFlow).toBeCloseTo(25.34, 1)
+    expect(c.startFlow).toBeCloseTo(22.24, 1)
     expect(c.minFlow).toBeLessThanOrEqual(c.startFlow)
     expect(c.maxFlow).toBeGreaterThan(c.startFlow)
     expect(c.propagationMin).toBe(65)

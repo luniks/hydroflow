@@ -299,9 +299,9 @@ describe('ConfigModal', () => {
     it('met à jour les valeurs déduites avec les réglages', async () => {
       const wrapper = factory()
       const draft = draftOf(wrapper)
-      draft.turbine.maxTurbineFlow = 20 // démarrage à 5,5 + 30 % de 20 = 11,5 m³/s
+      draft.turbine.maxTurbineFlow = 20 // démarrage à 5,5 + 25,5 % de 20 = 10,6 m³/s
       await tab(wrapper, 'Turbine')
-      expect(document.querySelector('.cfg-preview__list')?.textContent).toContain('11.5 m³/s')
+      expect(document.querySelector('.cfg-preview__list')?.textContent).toContain('10.6 m³/s')
     })
 
     it('rétablit les valeurs du modèle en conservant les stations choisies', async () => {

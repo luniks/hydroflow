@@ -129,7 +129,7 @@ describe('turbineForecast · inertie de la retenue', () => {
   })
 
   it('un creux long finit par couper la turbine, avec un délai', () => {
-    const dip = (a: number): number => (a > 100 || a < 30 ? 40 : 15)
+    const dip = (a: number): number => (a > 50 || a < 10 ? 40 : 15)
     const none = turbineForecast(series(4, dip), [], { ...M, stopHoldMin: 0 }, NOW)
     const held = turbineForecast(series(4, dip), [], { ...M, stopHoldMin: 20 }, NOW)
     const firstStop = (f: typeof none) => f.steps.find((s) => s.turbine === 'stop')?.minute
@@ -177,7 +177,7 @@ describe('turbineForecast · éclusée', () => {
     expect(after.turbine).toBe('stop')
     // La puissance redescend progressivement au lieu de tomber à zéro.
     expect(after.powerKw).toBeGreaterThan(0)
-    expect(f.steps.at(-1)!.powerKw).toBe(0)
+    expect(f.steps.find((s) => s.minute === 90)!.powerKw).toBeLessThan(after.powerKw)
   })
 
   it('le régime réduit prolonge la production après la baisse sous le seuil', () => {

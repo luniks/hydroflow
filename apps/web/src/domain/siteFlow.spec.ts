@@ -16,7 +16,7 @@ describe('lagMinutes', () => {
     expect(lagMinutes(24, M.lag)).toBeGreaterThan(68)
     expect(lagMinutes(24, M.lag)).toBeLessThan(78)
     expect(lagMinutes(12, M.lag)).toBeGreaterThan(lagMinutes(24, M.lag))
-    expect(lagMinutes(12, M.lag)).toBeCloseTo(102.8, 0)
+    expect(lagMinutes(12, M.lag)).toBeCloseTo(81.7, 0)
   })
 
   it('est plafonné et gère un débit nul', () => {
