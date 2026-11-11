@@ -1,0 +1,23 @@
+# Hydroflow (PWA) — Apache / cPanel
+# Copié tel quel dans dist/ par Vite (public/ -> racine du build).
+#
+# Volontairement sans mod_rewrite : l'hébergeur désactive FollowSymLinks et
+# SymLinksIfOwnerMatch, ce qui rend tout RewriteRule interdit (403, AH00670).
+# L'app n'a pas de routeur : aucun fallback SPA nécessaire. La redirection HTTPS
+# se règle dans cPanel (Domaines > Forcer la redirection HTTPS).
+
+AddType application/manifest+json .webmanifest
+
+<IfModule mod_headers.c>
+  # Jamais en cache long : sinon les mises à jour n'arrivent pas
+  <FilesMatch "^(index\.html|sw\.js|registerSW\.js|workbox-.*\.js|manifest\.webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+
+  # Fichiers hachés par Vite : cache longue durée
+  <If "%{REQUEST_URI} =~ m#^/assets/#">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </If>
+
+  Header always set X-Content-Type-Options "nosniff"
+</IfModule>

@@ -22,7 +22,11 @@ describe('useStations', () => {
     api.remove('O460251001')
     await nextTick()
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.stations)!)
-    expect(saved.map((s: { code: string }) => s.code)).toEqual(['O469251003', 'O480252002'])
+    expect(saved.map((s: { code: string }) => s.code)).toEqual([
+      'O480252002',
+      'O469251003',
+      'O477402001',
+    ])
   })
 
   it('autorise une liste vide', async () => {
@@ -35,12 +39,12 @@ describe('useStations', () => {
   it('refuse d’ajouter un code en doublon', () => {
     expect(api.add(makeStation('O460251001', 'Amont', {}))).toBe(false)
     expect(api.add(makeStation('O999999999', 'Aval', { name: 'Neuve' }))).toBe(true)
-    expect(api.codes.value).toHaveLength(4)
+    expect(api.codes.value).toHaveLength(5)
   })
 
   it('réordonne la liste', () => {
     api.reorder(0, 2)
-    expect(api.codes.value).toEqual(['O469251003', 'O480252002', 'O460251001'])
+    expect(api.codes.value).toEqual(['O469251003', 'O460251001', 'O480252002', 'O477402001'])
   })
 
   it('ignore un réordonnancement hors bornes', () => {
@@ -51,14 +55,14 @@ describe('useStations', () => {
 
   it('change le libellé d’une station', () => {
     api.setLabel('O460251001', 'Aval')
-    expect(api.stations.value[0]!.label).toBe('Aval')
+    expect(api.stations.value.find((s) => s.code === 'O460251001')!.label).toBe('Aval')
   })
 
   it('purge l’état des stations retirées', () => {
     api.syncStates()
-    expect(Object.keys(api.states)).toHaveLength(3)
+    expect(Object.keys(api.states)).toHaveLength(4)
     api.remove('O460251001')
-    expect(Object.keys(api.states)).toEqual(['O469251003', 'O480252002'])
+    expect(Object.keys(api.states)).toEqual(['O480252002', 'O469251003', 'O477402001'])
   })
 
   it('charge les observations et renseigne le nom de la station', async () => {
