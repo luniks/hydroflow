@@ -239,8 +239,9 @@ describe('ConfigModal', () => {
       const draft = draftOf(wrapper)
       expect(draft.stations.map((s) => s.code)).toEqual([
         'O469251003',
-        'O480252002',
         'O460251001',
+        'O480252002',
+        'O477402001',
       ])
     })
   })

@@ -61,7 +61,7 @@ describe('useDataLoader', () => {
     )
     await loader.loadAll()
     expect(api.health.hubeau.state).toBe('err')
-    expect(api.health.hubeau.detail).toMatch(/3 stations en erreur/)
+    expect(api.health.hubeau.detail).toMatch(/4 stations en erreur/)
   })
 
   it('signale aucune station suivie', async () => {

@@ -28,25 +28,26 @@ beforeEach(async () => {
 describe('useRain', () => {
   it('génère un point pluie par station géolocalisée', () => {
     expect(rain.stationPoints.value.map((p) => p.key)).toEqual([
-      'station_O460251001',
-      'station_O469251003',
       'station_O480252002',
+      'station_O469251003',
+      'station_O460251001',
+      'station_O477402001',
     ])
     expect(rain.stationPoints.value[0]!.context).toContain('Station suivie')
   })
 
   it('ignore les stations sans coordonnées', () => {
     stations.stations.value[0]!.lat = undefined
-    expect(rain.stationPoints.value).toHaveLength(2)
+    expect(rain.stationPoints.value).toHaveLength(3)
   })
 
   it('crée l’état dès qu’un point apparaît, sans attendre un chargement', () => {
     stations.stations.value[0]!.lat = undefined
-    expect(rain.states['station_O460251001']).toBeUndefined()
+    expect(rain.states['station_O480252002']).toBeUndefined()
 
-    stations.stations.value[0]!.lat = 43.6192
+    stations.stations.value[0]!.lat = 43.76039436
     // Les cartes se rendent immédiatement : l'état doit exister sans appel explicite.
-    expect(rain.states['station_O460251001']).toBeDefined()
+    expect(rain.states['station_O480252002']).toBeDefined()
   })
 
   it('expose les points amont par défaut', () => {
@@ -60,7 +61,7 @@ describe('useRain', () => {
     rain.setHidden('station_O460251001', true)
     await nextTick()
     expect(rain.isHidden('station_O460251001')).toBe(true)
-    expect(rain.visiblePoints.value).toHaveLength(5)
+    expect(rain.visiblePoints.value).toHaveLength(6)
     expect(rain.states['station_O460251001']).toBeUndefined()
     expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.rainHidden)!)).toEqual([
       'station_O460251001',

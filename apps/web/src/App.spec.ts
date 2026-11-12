@@ -54,13 +54,13 @@ describe('App', () => {
     await flushPromises()
 
     expect(wrapper.find('.app-header__update').text()).not.toContain('Jamais chargé')
-    expect(wrapper.findAllComponents({ name: 'StationCard' })).toHaveLength(3)
+    expect(wrapper.findAllComponents({ name: 'StationCard' })).toHaveLength(4)
   })
 
   it('affiche une carte par station suivie', async () => {
     const wrapper = factory()
     await flushPromises()
-    expect(wrapper.findComponent(StationGrid).findAll('.card__title').length).toBe(3)
+    expect(wrapper.findComponent(StationGrid).findAll('.card__title').length).toBe(4)
   })
 
   it('recharge les séries quand la période change', async () => {

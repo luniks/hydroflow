@@ -7,6 +7,7 @@ import { useTheme } from '@/composables/useTheme'
 import { useTimeRange } from '@/composables/useTimeRange'
 import AppFooter from '@/components/layout/AppFooter.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
+import ReloadPrompt from '@/components/ReloadPrompt.vue'
 import ConfigModal from '@/components/config/ConfigModal.vue'
 import ExploitZone from '@/components/exploitation/ExploitZone.vue'
 import RainSection from '@/components/rain/RainSection.vue'
@@ -67,6 +68,8 @@ onMounted(() => void loadAll())
       @close="configOpen = false"
       @saved="loadAll"
     />
+
+    <ReloadPrompt />
   </div>
 </template>
 
