@@ -207,12 +207,35 @@ describe('BaseModal', () => {
     wrapper.unmount()
   })
 
-  it('bloque le défilement du corps puis le restaure', async () => {
+  it('bloque le défilement de html et body puis le restaure', async () => {
+    document.documentElement.style.overflow = 'auto'
     const wrapper = factory()
+    expect(document.documentElement.style.overflow).toBe('hidden')
     expect(document.body.style.overflow).toBe('hidden')
     await wrapper.setProps({ open: false })
+    expect(document.documentElement.style.overflow).toBe('auto')
     expect(document.body.style.overflow).toBe('')
     wrapper.unmount()
+    document.documentElement.style.overflow = ''
+  })
+
+  it('ne déverrouille pas depuis une modale qui n’a jamais verrouillé', () => {
+    const a = factory()
+    const b = factory(false)
+    b.unmount()
+    expect(document.body.style.overflow).toBe('hidden')
+    a.unmount()
+    expect(document.body.style.overflow).toBe('')
+  })
+
+  it('garde le verrou tant qu’une modale reste ouverte', async () => {
+    const a = factory()
+    const b = factory()
+    await a.setProps({ open: false })
+    expect(document.body.style.overflow).toBe('hidden')
+    b.unmount()
+    expect(document.documentElement.style.overflow).toBe('')
+    a.unmount()
   })
 
   it('demande la fermeture sur Échap, le voile et la croix', async () => {
