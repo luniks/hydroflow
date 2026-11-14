@@ -100,12 +100,12 @@ export function turbineOutlook(
    */
   measuredAtMs?: number,
 ): TurbineOutlook {
-  if (!points.length) return base('unknown', 'neutral', null, null, 'En attente de mesure…')
+  if (!points.length) return base('unknown', 'neutral', null, null, 'En attente de mesure')
 
   const ageMin = (nowMs - (measuredAtMs ?? Date.parse(points[points.length - 1]!.t))) / MINUTE_MS
   if (ageMin > OUTLOOK_STALE_MIN) {
     return {
-      ...base('stale', 'warn', null, null, `Aucune prévision · dernière mesure il y a ${fmtDuration(ageMin)}`),
+      ...base('stale', 'warn', null, null, `Pas de prévision · mesure d’il y a ${fmtDuration(ageMin)}`),
       detail: `La dernière mesure date de plus de ${fmtDuration(OUTLOOK_STALE_MIN)} : aucune prévision fiable.`,
     }
   }
@@ -186,14 +186,14 @@ export function outlookForState(
   if (turbine === 'run') {
     if (q < c.minFlow) {
       return {
-        ...mk('stop-now', 'danger', 'changing', 'Arrêt requis · débit sous le minimal'),
+        ...mk('stop-now', 'danger', 'changing', 'Arrêt · débit réservé'),
         inMinutes: 0,
         detail: `${here}, sous le débit minimal (${fmtQ(c.minFlow)} m³/s).`,
       }
     }
     if (q > c.maxFlow) {
       return {
-        ...mk('stop-now', 'danger', 'changing', 'Arrêt requis · débit au-dessus du maximum'),
+        ...mk('stop-now', 'danger', 'changing', 'Arrêt · capacité maximale'),
         inMinutes: 0,
         detail: `${here}, au-dessus du débit maximum (${fmtQ(c.maxFlow)} m³/s).`,
       }
@@ -291,7 +291,7 @@ export function outlookForState(
 
   if (q > c.maxFlow) {
     return {
-      ...mk('stopped-blocked', 'danger', 'stable', 'Arrêt · débit trop élevé'),
+      ...mk('stopped-blocked', 'danger', 'stable', 'Arrêt · capacité maximale'),
       detail: `${here}, au-dessus du débit maximum (${fmtQ(c.maxFlow)} m³/s) · pas de redémarrage prévu dans les ${horizon}.`,
     }
   }
@@ -299,7 +299,7 @@ export function outlookForState(
   const gapStart = c.startFlow - extremes().hi
   if (gapStart < watchMargin) {
     return {
-      ...mk('stopped-watch', 'warn', 'watch', 'Arrêt · proche du seuil de démarrage'),
+      ...mk('stopped-watch', 'warn', 'watch', 'Arrêt · proche du démarrage'),
       detail: `${here} · à ${fmtQ(gapStart)} m³/s du débit de démarrage (${fmtQ(c.startFlow)} m³/s).`,
     }
   }

@@ -121,17 +121,13 @@ Quand le débit monte, la chute brute diminue (le niveau aval monte). Sous `head
 
 ```mermaid
 stateDiagram-v2
+    direction LR
     [*] --> Arret
     Arret --> Marche : q ≥ 11,49 ET H ≥ 1,5 m
-    Marche --> Arret : q < 11,375 (après tenue) OU H < 1,5 m
-    note right of Marche
-        Tenue (stopHoldMin = 4 min) : un creux sous le seuil
-        plus court que la tenue n'arrête pas la turbine,
-        le débit est maintenu au seuil pendant ce temps
-    end note
+    Marche --> Arret : q < 11,375 après tenue OU H < 1,5 m
 ```
 
-**Tenue (`rideThrough`)** : la retenue amortit les creux courts. Pendant `stopHoldMin` minutes après le début d'un creux sous 11,375, le débit est relevé au seuil d'arrêt ; au-delà, la turbine s'arrête. Valeur actuelle : 4 min.
+**Tenue (`rideThrough`)** : la retenue amortit les creux courts. Pendant `stopHoldMin` minutes (4 min) après le début d'un creux sous 11,375, le débit est relevé au seuil d'arrêt ; au-delà, la turbine s'arrête.
 
 L'état initial vient du rejeu de la série (`turbineOutlook` / `inferTurbineState`).
 

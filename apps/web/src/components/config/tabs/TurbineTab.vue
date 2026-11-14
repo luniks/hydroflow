@@ -97,7 +97,7 @@ const advancedCollapsed = ref(true)
       <dl v-if="preview" class="cfg-preview__list">
         <div><dt>Démarrage</dt><dd>{{ fmtQ(preview.startFlow) }} m³/s</dd></div>
         <div><dt>Arrêt sous</dt><dd>{{ fmtQ(preview.stopFlow) }} m³/s</dd></div>
-        <div><dt>Arrêt en crue (chute minimale)</dt><dd>{{ fmtQ(preview.maxFlow) }} m³/s</dd></div>
+        <div><dt>Arrêt au-dessus de</dt><dd>{{ fmtQ(preview.maxFlow) }} m³/s</dd></div>
         <div><dt>Puissance à pleine capacité</dt><dd>{{ Math.round(preview.fullPowerKw) }} kW</dd></div>
       </dl>
       <p v-else class="cfg-block__hint">Corrigez les réglages invalides pour les calculer.</p>

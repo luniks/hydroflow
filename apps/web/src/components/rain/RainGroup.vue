@@ -58,11 +58,9 @@ const ready = computed(() => props.points.filter((p) => rain.states[p.key]))
 </template>
 
 <style scoped>
-/* Mobile : pas de marge laterale autour du groupe, pour que les encarts aient la meme largeur que ceux des stations. */
-@media (max-width: 640px) {
-  .rain-group.ui-collapse {
-    padding-inline: 0;
-  }
+/* Pas de marge laterale autour du groupe, pour que les encarts s'alignent avec ceux des stations. */
+.rain-group.ui-collapse {
+  padding-inline: 0;
 }
 
 .rain-group__grid {

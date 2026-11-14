@@ -23,7 +23,7 @@ export const TURBINE_FIELDS: SettingField[] = [
   { path: 'startRatio', label: 'Débit de démarrage', unit: '× capacité', hint: 'Part de la capacité maximale (0,3 = 30 %)', group: 'install', step: 0.01, min: 0, max: 1 },
   { path: 'stopRatio', label: 'Débit d’arrêt', unit: '× capacité', hint: 'Sous ce débit, la turbine s’arrête', group: 'install', step: 0.01, min: 0, max: 1 },
   { path: 'ratedPowerKw', label: 'Puissance nominale', unit: 'kW', group: 'install', step: 10, min: 0 },
-  { path: 'headMin', label: 'Chute minimale', unit: 'm', hint: 'En dessous, arrêt (crue)', group: 'install', step: 0.1, min: 0 },
+  { path: 'headMin', label: 'Chute minimale', unit: 'm', hint: 'En dessous, arrêt', group: 'install', step: 0.1, min: 0 },
   { path: 'headMax', label: 'Chute maximale', unit: 'm', group: 'install', step: 0.1, min: 0 },
   { path: 'poolLowCm', label: 'Niveau amont bas', unit: 'cm', hint: 'Repère local de la retenue', group: 'install', step: 1 },
   { path: 'tailLowCm', label: 'Niveau aval bas', unit: 'cm', hint: 'Repère local de la restitution, à bas débit', group: 'install', step: 1 },
