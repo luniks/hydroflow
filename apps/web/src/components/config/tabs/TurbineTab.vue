@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useStations } from '@/composables/useStations'
 import { fmtQ } from '@/domain/format'
 import { TURBINE_FIELDS, turbinePreview, validateTurbineModel, type SettingsGroup } from '@/domain/turbineSettings'
@@ -28,7 +28,13 @@ const stationOptions = computed(() =>
     label: `${states[s.code]?.name || s.fallbackName} (${s.code})`,
   })),
 )
-const downOptions = computed(() => [{ value: '', label: 'Aucune (valeurs par défaut)' }, ...stationOptions.value])
+/** Seules les stations étiquetées « Aval » conviennent pour recaler le débit au barrage. */
+const downStationOptions = computed(() =>
+  props.draft.stations
+    .filter((s) => s.label === 'Aval')
+    .map((s) => ({ value: s.code, label: `${states[s.code]?.name || s.fallbackName} (${s.code})` })),
+)
+const downOptions = computed(() => [{ value: '', label: 'Aucune (valeurs par défaut)' }, ...downStationOptions.value])
 
 const refCode = computed<string>({
   get: () => model.value.refCode,
@@ -42,6 +48,15 @@ const downCode = computed<string>({
     model.value.downCode = v
   },
 })
+
+/** Config héritée ou station requalifiée : une aval absente de la liste est vidée plutôt que de laisser un select vide. */
+watch(
+  [downStationOptions, () => model.value.downCode],
+  ([options, code]) => {
+    if (code && !options.some((o) => o.value === code)) model.value.downCode = ''
+  },
+  { immediate: true },
+)
 
 const error = computed(() => validateTurbineModel(model.value))
 const preview = computed(() => (error.value ? null : turbinePreview(model.value)))
@@ -77,17 +92,33 @@ const advancedCollapsed = ref(true)
 
 <template>
   <div class="turbine-tab">
+    <section class="cfg-block cfg-preview" aria-live="polite" aria-label="Valeurs d’exploitation">
+      <h3 class="cfg-block__title">Valeurs d’exploitation</h3>
+      <dl v-if="preview" class="cfg-preview__list">
+        <div><dt>Démarrage</dt><dd>{{ fmtQ(preview.startFlow) }} m³/s</dd></div>
+        <div><dt>Arrêt sous</dt><dd>{{ fmtQ(preview.stopFlow) }} m³/s</dd></div>
+        <div><dt>Arrêt en crue (chute minimale)</dt><dd>{{ fmtQ(preview.maxFlow) }} m³/s</dd></div>
+        <div><dt>Puissance à pleine capacité</dt><dd>{{ Math.round(preview.fullPowerKw) }} kW</dd></div>
+      </dl>
+      <p v-else class="cfg-block__hint">Corrigez les réglages invalides pour les calculer.</p>
+    </section>
+
     <section class="cfg-block">
       <h3 class="cfg-block__title">Stations</h3>
       <div class="cfg-grid">
-        <div>
-          <BaseSelect v-model="refCode" label="Station amont (référence)" :options="stationOptions" :disabled="!stationOptions.length" />
-          <p class="cfg-block__hint">Son débit alimente la prévision. Obligatoire.</p>
-        </div>
-        <div>
-          <BaseSelect v-model="downCode" label="Station aval (facultative)" :options="downOptions" />
-          <p class="cfg-block__hint">Sert à recaler le débit estimé au barrage.</p>
-        </div>
+        <BaseSelect
+          v-model="refCode"
+          label="Station amont (référence)"
+          hint="Son débit alimente la prévision. Obligatoire."
+          :options="stationOptions"
+          :disabled="!stationOptions.length"
+        />
+        <BaseSelect
+          v-model="downCode"
+          label="Station aval (facultative)"
+          hint="Sert à recaler le débit estimé au barrage."
+          :options="downOptions"
+        />
       </div>
       <p v-if="!stationOptions.length" class="cfg-block__hint">
         Ajoutez d’abord une station dans l’onglet « Stations suivies ».
@@ -106,17 +137,6 @@ const advancedCollapsed = ref(true)
       <div class="cfg-grid">
         <TurbineField v-for="f in behavior" :key="f.path" :model="model" :field="f" />
       </div>
-    </section>
-
-    <section class="cfg-block cfg-preview" aria-live="polite">
-      <h3 class="cfg-block__title">Valeurs déduites</h3>
-      <dl v-if="preview" class="cfg-preview__list">
-        <div><dt>Démarrage</dt><dd>{{ fmtQ(preview.startFlow) }} m³/s</dd></div>
-        <div><dt>Arrêt sous</dt><dd>{{ fmtQ(preview.stopFlow) }} m³/s</dd></div>
-        <div><dt>Arrêt en crue (chute minimale)</dt><dd>{{ fmtQ(preview.maxFlow) }} m³/s</dd></div>
-        <div><dt>Puissance à pleine capacité</dt><dd>{{ Math.round(preview.fullPowerKw) }} kW</dd></div>
-      </dl>
-      <p v-else class="cfg-block__hint">Corrigez les réglages invalides pour les calculer.</p>
     </section>
 
     <BaseCollapse v-model="advancedCollapsed" title="Réglages avancés" class="cfg-advanced">

@@ -262,10 +262,20 @@ describe('ConfigModal', () => {
       await tab(wrapper, 'Turbine')
       const titles = [...document.querySelectorAll('.cfg-block__title')].map((el) => el.textContent?.trim())
       expect(titles).toEqual(
-        expect.arrayContaining(['Stations', 'Installation', 'Comportement', 'Valeurs déduites']),
+        expect.arrayContaining(['Stations', 'Installation', 'Comportement', 'Valeurs d’exploitation']),
       )
+      expect(titles).not.toContain('Valeurs déduites')
       expect(titles).not.toContain('Plage de rendement optimal')
       expect(titles).not.toContain('Délai de propagation')
+    })
+
+    it('place les valeurs d’exploitation en premier dans l’onglet', async () => {
+      const wrapper = factory()
+      await tab(wrapper, 'Turbine')
+      const first = document.querySelector('.turbine-tab > section')!
+      expect(first.classList.contains('cfg-preview')).toBe(true)
+      expect(first.getAttribute('aria-label')).toBe('Valeurs d’exploitation')
+      expect(first.querySelector('.cfg-block__title')?.textContent?.trim()).toBe('Valeurs d’exploitation')
     })
 
     it('refuse une chute maximale inférieure à la chute minimale', async () => {
@@ -295,6 +305,40 @@ describe('ConfigModal', () => {
       expect(refOptions.join(' ')).toContain('O469251003')
       expect(refOptions.join(' ')).not.toContain('Aucune')
       expect(downOptions[0]).toContain('Aucune')
+    })
+
+    it('ne propose en station aval que les stations étiquetées Aval', async () => {
+      const wrapper = factory()
+      await tab(wrapper, 'Turbine')
+      const select = [...document.querySelectorAll('.ui-field')]
+        .find((f) => f.querySelector('.ui-field__label')?.textContent?.trim().startsWith('Station aval'))!
+        .querySelector('select')!
+      const values = [...select.querySelectorAll('option')].map((o) => o.getAttribute('value'))
+      const avals = DEFAULT_STATIONS.filter((s) => s.label === 'Aval').map((s) => s.code)
+      expect(values).toEqual(['', ...avals])
+      expect(values).not.toContain('O469251003')
+    })
+
+    it('vide la station aval quand elle n’est plus étiquetée Aval', async () => {
+      const wrapper = factory()
+      const draft = draftOf(wrapper)
+      expect(draft.turbine.downCode).toBe(DEFAULT_TURBINE_MODEL.downCode)
+      draft.stations.find((s) => s.code === draft.turbine.downCode)!.label = 'Amont'
+      await nextTick()
+      expect(draft.turbine.downCode).toBe('')
+    })
+
+    it('remplace les textes d’aide en ligne par des infobulles', async () => {
+      const wrapper = factory()
+      await tab(wrapper, 'Turbine')
+      expect(document.querySelector('.tfield__hint')).toBeNull()
+      const hints = [...document.querySelectorAll<HTMLButtonElement>('.turbine-tab .ui-hint')]
+      expect(hints.length).toBeGreaterThan(0)
+      const reserve = hints.find((b) => b.getAttribute('aria-label') === 'Aide : Débit réservé')!
+      expect(reserve).toBeDefined()
+      reserve.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+      await nextTick()
+      expect(document.querySelector('[role="tooltip"]')?.textContent).toContain('Passe à poissons')
     })
 
     it('met à jour les valeurs déduites avec les réglages', async () => {

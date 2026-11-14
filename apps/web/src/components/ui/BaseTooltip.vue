@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useId } from 'vue'
+import { computed, onBeforeUnmount, ref, useId, watch } from 'vue'
 
 withDefaults(defineProps<{ placement?: 'top' | 'bottom' }>(), { placement: 'bottom' })
 
@@ -18,9 +18,12 @@ function reposition() {
     if (!el) return
     const rect = el.getBoundingClientRect()
     const margin = 8
-    if (rect.left < margin) shiftX.value = margin - rect.left
-    else if (rect.right > window.innerWidth - margin)
-      shiftX.value = window.innerWidth - margin - rect.right
+    // Dans une modale, on borne par le panneau (la bulle ne doit pas le déborder) ; sinon par la fenêtre.
+    const bounds = root.value?.closest('[role="dialog"]')?.getBoundingClientRect()
+    const minX = (bounds?.left ?? 0) + margin
+    const maxX = (bounds?.right ?? window.innerWidth) - margin
+    if (rect.left < minX) shiftX.value = minX - rect.left
+    else if (rect.right > maxX) shiftX.value = maxX - rect.right
   })
 }
 
@@ -28,6 +31,29 @@ function show() {
   open.value = true
   reposition()
 }
+
+/** Tactile : un tap hors de l'infobulle ne retire pas toujours le focus (Safari), on ferme explicitement. */
+function onOutsidePointer(e: Event) {
+  if (!root.value?.contains(e.target as Node)) open.value = false
+}
+function onEscape(e: KeyboardEvent) {
+  if (e.key === 'Escape') open.value = false
+}
+
+watch(open, (isOpen) => {
+  if (isOpen) {
+    document.addEventListener('pointerdown', onOutsidePointer)
+    document.addEventListener('keydown', onEscape)
+  } else {
+    document.removeEventListener('pointerdown', onOutsidePointer)
+    document.removeEventListener('keydown', onEscape)
+  }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onOutsidePointer)
+  document.removeEventListener('keydown', onEscape)
+})
 </script>
 
 <template>
