@@ -19,13 +19,13 @@ describe('turbineOutlook · cas sans prévision', () => {
   it('attend une mesure', () => {
     const o = turbineOutlook([], c, NOW)
     expect(o).toMatchObject({ kind: 'unknown', stability: null, turbine: null, inMinutes: null })
-    expect(o.headline).toBe('En attente de mesure…')
+    expect(o.headline).toBe('En attente de mesure')
   })
 
   it('refuse de prévoir à partir d’une mesure trop ancienne', () => {
     const o = turbineOutlook(pts([180, 10], [170, 10]), c, NOW)
     expect(o).toMatchObject({ kind: 'stale', tone: 'warn', turbine: null })
-    expect(o.headline).toBe('Aucune prévision · dernière mesure il y a 2 h 50')
+    expect(o.headline).toBe('Pas de prévision · mesure d’il y a 2 h 50')
     expect(o.detail).toContain('plus de 2 h')
   })
 
@@ -35,7 +35,7 @@ describe('turbineOutlook · cas sans prévision', () => {
     expect(turbineOutlook(shifted, c, NOW).kind).not.toBe('stale')
     const o = turbineOutlook(shifted, c, NOW, NOW - 150 * 60_000)
     expect(o.kind).toBe('stale')
-    expect(o.headline).toBe('Aucune prévision · dernière mesure il y a 2 h 30')
+    expect(o.headline).toBe('Pas de prévision · mesure d’il y a 2 h 30')
   })
 
   it('accepte une mesure tout juste dans la limite', () => {
@@ -110,14 +110,14 @@ describe('outlookForState · turbine en marche', () => {
   it('exige l’arrêt immédiat sous le débit minimal', () => {
     const o = outlookForState(flat(4), c, 'run', NOW)
     expect(o).toMatchObject({ kind: 'stop-now', tone: 'danger', inMinutes: 0 })
-    expect(o.headline).toBe('Arrêt requis · débit sous le minimal')
+    expect(o.headline).toBe('Arrêt · débit réservé')
     expect(o.detail).toContain('sous le débit minimal (5.5 m³/s)')
   })
 
   it('exige l’arrêt immédiat au-dessus du débit maximum', () => {
     const o = outlookForState(flat(30), c, 'run', NOW)
     expect(o).toMatchObject({ kind: 'stop-now', tone: 'danger', inMinutes: 0 })
-    expect(o.headline).toBe('Arrêt requis · débit au-dessus du maximum')
+    expect(o.headline).toBe('Arrêt · capacité maximale')
     expect(o.detail).toContain('au-dessus du débit maximum (23.5 m³/s)')
   })
 

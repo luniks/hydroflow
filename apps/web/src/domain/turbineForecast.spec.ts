@@ -44,7 +44,7 @@ describe('turbineForecast · cas sans prévision', () => {
   it('mesure l’âge depuis la mesure elle-même, pas depuis son arrivée au barrage', () => {
     const f = turbineForecast(series(2, () => 40), [], M, NOW + 125 * MIN)
     expect(f.outlook.kind).toBe('stale')
-    expect(f.outlook.headline).toBe('Aucune prévision · dernière mesure il y a 2 h 05')
+    expect(f.outlook.headline).toBe('Pas de prévision · mesure d’il y a 2 h 05')
     expect(turbineForecast(series(2, () => 40), [], M, NOW + 115 * MIN).outlook.kind).not.toBe('stale')
   })
 

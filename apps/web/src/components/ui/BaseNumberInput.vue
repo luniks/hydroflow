@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { useId } from 'vue'
+import BaseHint from './BaseHint.vue'
 
 withDefaults(
   defineProps<{
     label?: string
+    hint?: string
     unit?: string
     min?: number
     max?: number
@@ -31,7 +33,10 @@ function onInput(e: Event) {
 
 <template>
   <div class="ui-field">
-    <label v-if="label" class="ui-field__label" :for="id">{{ label }}</label>
+    <div v-if="label" class="ui-field__labelrow">
+      <label class="ui-field__label" :for="id">{{ label }}</label>
+      <BaseHint v-if="hint" :text="hint" :label="label" />
+    </div>
     <div class="ui-input__wrap" :class="{ 'has-error': !!error }">
       <input
         :id="id"
@@ -58,6 +63,13 @@ function onInput(e: Event) {
 .ui-field {
   display: flex;
   flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ui-field__labelrow {
+  display: flex;
+  align-items: center;
   gap: 4px;
   min-width: 0;
 }

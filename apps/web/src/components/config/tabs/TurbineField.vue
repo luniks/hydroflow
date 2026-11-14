@@ -25,8 +25,8 @@ const value = computed<number | null>({
       :min="field.min"
       :max="field.max"
       :step="field.step"
+      :hint="field.hint"
     />
-    <p v-if="field.hint" class="tfield__hint">{{ field.hint }}</p>
   </div>
 </template>
 
@@ -35,10 +35,4 @@ const value = computed<number | null>({
   min-width: 0;
 }
 
-.tfield__hint {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 0.72rem;
-  line-height: 1.3;
-}
 </style>

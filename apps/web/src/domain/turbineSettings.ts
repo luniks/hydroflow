@@ -18,20 +18,20 @@ export interface SettingField {
 
 /** Reglages numeriques saisissables, dans l'ordre d'affichage. Les stations et la courbe de rendement ont leur propre saisie. */
 export const TURBINE_FIELDS: SettingField[] = [
-  { path: 'reserveFlow', label: 'Débit réservé', unit: 'm³/s', hint: 'Passe à poissons et surverse : prélevé avant la turbine', group: 'install', step: 0.1, min: 0 },
+  { path: 'reserveFlow', label: 'Débit réservé', unit: 'm³/s', hint: 'Passe à poissons et surverse, prélevés avant la turbine', group: 'install', step: 0.1, min: 0 },
   { path: 'maxTurbineFlow', label: 'Capacité maximale turbinée', unit: 'm³/s', group: 'install', step: 0.1, min: 0 },
   { path: 'startRatio', label: 'Débit de démarrage', unit: '× capacité', hint: 'Part de la capacité maximale (0,3 = 30 %)', group: 'install', step: 0.01, min: 0, max: 1 },
   { path: 'stopRatio', label: 'Débit d’arrêt', unit: '× capacité', hint: 'Sous ce débit, la turbine s’arrête', group: 'install', step: 0.01, min: 0, max: 1 },
   { path: 'ratedPowerKw', label: 'Puissance nominale', unit: 'kW', group: 'install', step: 10, min: 0 },
-  { path: 'headMin', label: 'Chute minimale', unit: 'm', hint: 'En dessous, arrêt (crue)', group: 'install', step: 0.1, min: 0 },
+  { path: 'headMin', label: 'Chute minimale', unit: 'm', hint: 'En dessous, arrêt', group: 'install', step: 0.1, min: 0 },
   { path: 'headMax', label: 'Chute maximale', unit: 'm', group: 'install', step: 0.1, min: 0 },
   { path: 'poolLowCm', label: 'Niveau amont bas', unit: 'cm', hint: 'Repère local de la retenue', group: 'install', step: 1 },
-  { path: 'tailLowCm', label: 'Niveau aval bas', unit: 'cm', hint: 'Repère local de la restitution, à débit faible', group: 'install', step: 1 },
-  { path: 'stopHoldMin', label: 'Inertie à l’arrêt', unit: 'min', hint: 'Durée d’un creux de débit que la retenue absorbe avant l’arrêt', group: 'behavior', step: 1, min: 0 },
+  { path: 'tailLowCm', label: 'Niveau aval bas', unit: 'cm', hint: 'Repère local de la restitution, à bas débit', group: 'install', step: 1 },
+  { path: 'stopHoldMin', label: 'Inertie à l’arrêt', unit: 'min', hint: 'Creux de débit absorbé par la retenue avant l’arrêt', group: 'behavior', step: 1, min: 0 },
   { path: 'rampKwPerMin', label: 'Vitesse de rampe', unit: 'kW/min', hint: 'Montée et descente de la puissance (0 = instantané)', group: 'behavior', step: 0.5, min: 0 },
   { path: 'reducedPowerKw', label: 'Puissance en régime réduit', unit: 'kW', group: 'behavior', step: 10, min: 0 },
   { path: 'reducedMin', label: 'Durée du régime réduit', unit: 'min', hint: '0 tant qu’elle est inconnue', group: 'behavior', step: 1, min: 0 },
-  { path: 'defaultGain', label: 'Gain amont → barrage', unit: '', hint: 'Les travaux amont gonflent le débit de la station de référence', group: 'advanced', step: 0.01, min: 0 },
+  { path: 'defaultGain', label: 'Gain amont → barrage', unit: '', hint: 'Corrige le débit gonflé de la station de référence (travaux)', group: 'advanced', step: 0.01, min: 0 },
   { path: 'defaultOffset', label: 'Décalage amont → barrage', unit: 'm³/s', group: 'advanced', step: 0.1 },
   { path: 'calibrationWeight', label: 'Poids du calage sur l’aval', unit: '0 à 1', hint: '0 = valeurs par défaut seules, 1 = calage seul', group: 'advanced', step: 0.1, min: 0, max: 1 },
   { path: 'lag.refMin', label: 'Délai de propagation de référence', unit: 'min', hint: 'Station amont → turbine, à fort débit', group: 'advanced', step: 1, min: 0 },
@@ -41,7 +41,7 @@ export const TURBINE_FIELDS: SettingField[] = [
   { path: 'tailRating.a', label: 'Courbe de tarage aval · a', unit: '', hint: 'Niveau (m) = a × Q^b à la station aval', group: 'advanced', step: 0.0001, min: 0 },
   { path: 'tailRating.b', label: 'Courbe de tarage aval · b', unit: '', group: 'advanced', step: 0.01, min: 0 },
   { path: 'tailRefLevel', label: 'Niveau de la station pour le repère aval bas', unit: 'm', group: 'advanced', step: 0.01, min: 0 },
-  { path: 'headCorrection', label: 'Ajustement de chute', unit: 'm', hint: 'Décalage ajouté à la chute calculée (0 par défaut)', group: 'advanced', step: 0.01 },
+  { path: 'headCorrection', label: 'Ajustement de chute', unit: 'm', hint: 'Décalage ajouté à la chute calculée', group: 'advanced', step: 0.01 },
   { path: 'optimalShare', label: 'Part de la puissance nominale « optimale »', unit: '0 à 1', group: 'advanced', step: 0.05, min: 0, max: 1 },
 ]
 

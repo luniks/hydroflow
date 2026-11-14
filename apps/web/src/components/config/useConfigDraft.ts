@@ -64,8 +64,10 @@ export function useConfigDraft() {
   function commit(): string | null {
     const codes = draft.stations.map((s) => s.code)
     if (!codes.includes(draft.turbine.refCode)) return 'La station amont de référence doit faire partie des stations suivies.'
-    if (draft.turbine.downCode && !codes.includes(draft.turbine.downCode)) {
-      return 'La station aval doit faire partie des stations suivies.'
+    if (draft.turbine.downCode) {
+      const down = draft.stations.find((s) => s.code === draft.turbine.downCode)
+      if (!down) return 'La station aval doit faire partie des stations suivies.'
+      if (down.label !== 'Aval') return 'La station aval doit être étiquetée « Aval » dans les stations suivies.'
     }
     const error = exploitStore.commit(draft.turbine)
     if (error) return error

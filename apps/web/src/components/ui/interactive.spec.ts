@@ -6,6 +6,7 @@ import BaseInput from './BaseInput.vue'
 import BaseNumberInput from './BaseNumberInput.vue'
 import BaseTabs from './BaseTabs.vue'
 import BaseModal from './BaseModal.vue'
+import BaseHint from './BaseHint.vue'
 import BaseTooltip from './BaseTooltip.vue'
 
 const OPTIONS = [
@@ -207,12 +208,35 @@ describe('BaseModal', () => {
     wrapper.unmount()
   })
 
-  it('bloque le défilement du corps puis le restaure', async () => {
+  it('bloque le défilement de html et body puis le restaure', async () => {
+    document.documentElement.style.overflow = 'auto'
     const wrapper = factory()
+    expect(document.documentElement.style.overflow).toBe('hidden')
     expect(document.body.style.overflow).toBe('hidden')
     await wrapper.setProps({ open: false })
+    expect(document.documentElement.style.overflow).toBe('auto')
     expect(document.body.style.overflow).toBe('')
     wrapper.unmount()
+    document.documentElement.style.overflow = ''
+  })
+
+  it('ne déverrouille pas depuis une modale qui n’a jamais verrouillé', () => {
+    const a = factory()
+    const b = factory(false)
+    b.unmount()
+    expect(document.body.style.overflow).toBe('hidden')
+    a.unmount()
+    expect(document.body.style.overflow).toBe('')
+  })
+
+  it('garde le verrou tant qu’une modale reste ouverte', async () => {
+    const a = factory()
+    const b = factory()
+    await a.setProps({ open: false })
+    expect(document.body.style.overflow).toBe('hidden')
+    b.unmount()
+    expect(document.documentElement.style.overflow).toBe('')
+    a.unmount()
   })
 
   it('demande la fermeture sur Échap, le voile et la croix', async () => {
@@ -273,6 +297,59 @@ describe('BaseTooltip', () => {
     expect(wrapper.find('[role="tooltip"]').exists()).toBe(true)
     await wrapper.trigger('focusout')
     expect(wrapper.find('[role="tooltip"]').exists()).toBe(false)
+  })
+})
+
+describe('BaseTooltip (tactile)', () => {
+  it('se ferme sur un tap extérieur et sur Échap', async () => {
+    const wrapper = mount(BaseTooltip, { slots: { content: 'Détail' }, attachTo: document.body })
+    await wrapper.trigger('focusin')
+    expect(wrapper.find('[role="tooltip"]').exists()).toBe(true)
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[role="tooltip"]').exists()).toBe(false)
+
+    await wrapper.trigger('focusin')
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[role="tooltip"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('reste ouverte sur un tap à l’intérieur', async () => {
+    const wrapper = mount(BaseTooltip, { slots: { default: '<button>x</button>', content: 'Détail' }, attachTo: document.body })
+    await wrapper.trigger('focusin')
+    wrapper.find('button').element.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[role="tooltip"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+})
+
+describe('BaseHint', () => {
+  it('expose un bouton focusable avec libellé et ouvre l’infobulle au focus', async () => {
+    const wrapper = mount(BaseHint, { props: { text: 'Explication', label: 'Débit' }, attachTo: document.body })
+    const btn = wrapper.find('button')
+    expect(btn.attributes('type')).toBe('button')
+    expect(btn.attributes('aria-label')).toBe('Aide : Débit')
+    expect(wrapper.find('[role="tooltip"]').exists()).toBe(false)
+
+    await btn.trigger('click') // tap : le bouton prend le focus
+    expect(document.activeElement).toBe(btn.element)
+    await btn.trigger('focusin')
+    expect(wrapper.find('[role="tooltip"]').text()).toBe('Explication')
+    wrapper.unmount()
+  })
+
+  it('est rendu à droite du label des champs numériques et des listes', async () => {
+    const { default: BaseNumberInput } = await import('./BaseNumberInput.vue')
+    const { default: BaseSelect } = await import('./BaseSelect.vue')
+    const num = mount(BaseNumberInput, { props: { modelValue: 1, label: 'Débit', hint: 'Aide' } })
+    expect(num.find('.ui-field__labelrow .ui-hint').exists()).toBe(true)
+    const sel = mount(BaseSelect, { props: { modelValue: 'a', label: 'Station', hint: 'Aide', options: [{ value: 'a', label: 'A' }] } })
+    expect(sel.find('.ui-field__labelrow .ui-hint').exists()).toBe(true)
+    const none = mount(BaseNumberInput, { props: { modelValue: 1, label: 'Débit' } })
+    expect(none.find('.ui-hint').exists()).toBe(false)
   })
 })
 

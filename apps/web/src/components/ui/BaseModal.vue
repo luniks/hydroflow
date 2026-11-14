@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
+import { acquireScrollLock } from '../../composables/useScrollLock'
 import BaseButton from './BaseButton.vue'
 import BaseIcon from './BaseIcon.vue'
 import type { IconName } from './icons'
@@ -45,8 +46,15 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
+let releaseScroll: (() => void) | null = null
+
 function lockScroll(locked: boolean) {
-  document.body.style.overflow = locked ? 'hidden' : ''
+  if (locked) {
+    releaseScroll ??= acquireScrollLock()
+  } else {
+    releaseScroll?.()
+    releaseScroll = null
+  }
 }
 
 watch(
@@ -174,6 +182,7 @@ onBeforeUnmount(() => lockScroll(false))
   flex: 1;
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: var(--space-card);
 }
 

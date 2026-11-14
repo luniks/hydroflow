@@ -76,8 +76,8 @@ function resetAll() {
 <template>
   <BaseModal
     :open="open"
-    title="Configuration & Paramètres"
-    subtitle="Gestion des stations Hub'Eau & paramètres de la turbine"
+    title="Configuration"
+    subtitle="Stations Hub’Eau, turbine et pluviométrie"
     icon="gear"
     width="820px"
     @close="onCancel"

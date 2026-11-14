@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted, onScopeDispose, ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useAutoRefresh } from '@/composables/useAutoRefresh'
 import { useRefreshOnReturn } from '@/composables/useRefreshOnReturn'
 import { useDataLoader } from '@/composables/useDataLoader'
+import { useNow } from '@/composables/useNow'
 import { useTheme } from '@/composables/useTheme'
 import { useTimeRange } from '@/composables/useTimeRange'
 import AppFooter from '@/components/layout/AppFooter.vue'
@@ -24,12 +25,8 @@ useAutoRefresh(() => {
 })
 useRefreshOnReturn()
 
-/** Horloge partagee par les graphiques de pluie (barres passees/futures). */
-const nowMs = ref(Date.now())
-const clock = setInterval(() => {
-  nowMs.value = Date.now()
-}, 60_000)
-onScopeDispose(() => clearInterval(clock))
+/** Horloge partagee (prevision turbine, graphiques de pluie), resynchronisee apres chaque chargement. */
+const { nowMs } = useNow()
 
 const configOpen = ref(false)
 const configTab = ref('stations')

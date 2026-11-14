@@ -1,10 +1,11 @@
 import { HttpResponse, http } from 'msw'
-import { beforeEach, describe, expect, it } from 'vitest'
-import { nextTick } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { effectScope, nextTick } from 'vue'
 import { config } from '@/config/env'
 import { server } from '@/test/msw/server'
 import { useApiHealth } from './useApiHealth'
 import { useDataLoader } from './useDataLoader'
+import { useNow } from './useNow'
 import { useTimeRange } from './useTimeRange'
 import { useRain } from './useRain'
 import { useStations } from './useStations'
@@ -38,7 +39,23 @@ beforeEach(async () => {
   )
 })
 
+afterEach(() => vi.restoreAllMocks())
+
 describe('useDataLoader', () => {
+  it('resynchronise l’horloge partagée à la fin d’un chargement', async () => {
+    const scope = effectScope()
+    const { nowMs } = scope.run(() => useNow())!
+    const before = nowMs.value
+    const later = before + 25 * 60_000 // minuteur ralenti : l'horloge partagée est restée en arrière
+    vi.spyOn(Date, 'now').mockReturnValue(later)
+    expect(nowMs.value).toBe(before)
+
+    await loader.loadAll()
+
+    expect(nowMs.value).toBe(later)
+    scope.stop()
+  })
+
   it('charge stations, pluie et vigicrues puis repasse ok', async () => {
     await loader.loadAll()
     expect(loader.loading.value).toBe(false)

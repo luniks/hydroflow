@@ -1,10 +1,12 @@
 <script setup lang="ts" generic="T extends string | number">
 import { useId } from 'vue'
+import BaseHint from './BaseHint.vue'
 import type { SelectOption } from './types'
 
 const props = defineProps<{
   options: SelectOption<T>[]
   label?: string
+  hint?: string
   disabled?: boolean
 }>()
 
@@ -20,7 +22,10 @@ function onChange(e: Event) {
 
 <template>
   <div class="ui-field">
-    <label v-if="label" class="ui-field__label" :for="id">{{ label }}</label>
+    <div v-if="label" class="ui-field__labelrow">
+      <label class="ui-field__label" :for="id">{{ label }}</label>
+      <BaseHint v-if="hint" :text="hint" :label="label" />
+    </div>
     <select
       :id="id"
       class="ui-select"
@@ -44,6 +49,13 @@ function onChange(e: Event) {
 .ui-field {
   display: flex;
   flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ui-field__labelrow {
+  display: flex;
+  align-items: center;
   gap: 4px;
   min-width: 0;
 }
