@@ -291,4 +291,6 @@ export interface TurbineForecast {
   energyKwh: number
   /** Probabilite de marche a +30, +60 et +120 min. */
   pRun: { m30: number; m60: number; m120: number } | null
+  /** Date (ms) de la derniere mesure amont utilisee, `null` sans mesure. */
+  measuredAtMs: number | null
 }

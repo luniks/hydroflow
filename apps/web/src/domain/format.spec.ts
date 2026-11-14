@@ -90,9 +90,8 @@ describe('fmtDuration', () => {
 })
 
 describe('fmtClock', () => {
-  it('donne l’heure locale sur deux chiffres', () => {
-    const ms = Date.parse('2026-01-01T12:05:00Z')
-    expect(fmtClock(ms)).toMatch(/^\d{2}:\d{2}$/)
-    expect(fmtClock(ms)).toBe(new Date(ms).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))
+  it('donne l’heure de Paris sur deux chiffres, hiver (UTC+1) comme été (UTC+2)', () => {
+    expect(fmtClock(Date.parse('2026-01-01T12:05:00Z'))).toBe('13:05')
+    expect(fmtClock(Date.parse('2026-07-01T12:05:00Z'))).toBe('14:05')
   })
 })

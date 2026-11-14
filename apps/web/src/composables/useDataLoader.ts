@@ -4,6 +4,7 @@ import { fetchVigicrues, type VigicruesInfo } from '@/api/vigicrues'
 import { pluralize } from '@/domain/format'
 import type { RainPoint } from '@/domain/types'
 import { partialState, useApiHealth } from './useApiHealth'
+import { refreshNow } from './useNow'
 import { useRain } from './useRain'
 import { useStations } from './useStations'
 import { useTimeRange } from './useTimeRange'
@@ -97,6 +98,8 @@ export function useDataLoader() {
 
     // Series et fenetre changent ensemble : les points recus datent de maintenant, la fin de fenetre doit les suivre.
     refreshWindow()
+    // Les donnees sont fraiches : l'horloge partagee (prevision, delais, courbe) doit l'etre aussi.
+    refreshNow()
     syncHubeauHealth()
     if (someSourceAnswered()) lastUpdate.value = new Date()
   }

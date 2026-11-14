@@ -39,7 +39,7 @@ export function fmtDuration(minutes: number): string {
   return rest === 0 ? `${h} h` : `${h} h ${String(rest).padStart(2, '0')}`
 }
 
-/** Heure locale « 15:30 » d'un instant (ms). */
+/** Heure de Paris « 15:30 » d'un instant (ms) : celle du site, quel que soit le fuseau du navigateur. */
 export function fmtClock(ms: number): string {
-  return new Date(ms).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  return new Date(ms).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
 }

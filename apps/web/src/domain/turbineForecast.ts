@@ -70,6 +70,7 @@ export function turbineForecast(
     siteSeries: site,
     energyKwh: 0,
     pRun: null,
+    measuredAtMs: measuredAtMs ?? null,
   }
   if (outlook.turbine === null || !site.length) return empty
 
@@ -131,6 +132,7 @@ export function turbineForecast(
     siteSeries: site,
     energyKwh: energy,
     pRun: { m30: at(30), m60: at(60), m120: at(120) },
+    measuredAtMs: measuredAtMs ?? null,
   }
 }
 
