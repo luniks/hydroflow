@@ -11,6 +11,7 @@ export const pwaOptions: Partial<VitePWAOptions> = {
     short_name: 'Hydroflow',
     description: 'Suivi et prévision de production hydroélectrique, St-Jean-de-Rive',
     lang: 'fr',
+    id: '/',
     start_url: '/',
     scope: '/',
     display: 'standalone',

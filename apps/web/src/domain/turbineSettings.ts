@@ -31,7 +31,7 @@ export const TURBINE_FIELDS: SettingField[] = [
   { path: 'rampKwPerMin', label: 'Vitesse de rampe', unit: 'kW/min', hint: 'Montée et descente de la puissance (0 = instantané)', group: 'behavior', step: 0.5, min: 0 },
   { path: 'reducedPowerKw', label: 'Puissance en régime réduit', unit: 'kW', group: 'behavior', step: 10, min: 0 },
   { path: 'reducedMin', label: 'Durée du régime réduit', unit: 'min', hint: '0 tant qu’elle est inconnue', group: 'behavior', step: 1, min: 0 },
-  { path: 'defaultGain', label: 'Gain amont → barrage', unit: '', hint: 'Corrige le débit gonflé de la station de référence (travaux)', group: 'advanced', step: 0.01, min: 0 },
+  { path: 'defaultGain', label: 'Gain amont → barrage', unit: '', hint: 'Débit au barrage = gain × débit de la station de référence + décalage', group: 'advanced', step: 0.01, min: 0 },
   { path: 'defaultOffset', label: 'Décalage amont → barrage', unit: 'm³/s', group: 'advanced', step: 0.1 },
   { path: 'calibrationWeight', label: 'Poids du calage sur l’aval', unit: '0 à 1', hint: '0 = valeurs par défaut seules, 1 = calage seul', group: 'advanced', step: 0.1, min: 0, max: 1 },
   { path: 'lag.refMin', label: 'Délai de propagation de référence', unit: 'min', hint: 'Station amont → turbine, à fort débit', group: 'advanced', step: 1, min: 0 },

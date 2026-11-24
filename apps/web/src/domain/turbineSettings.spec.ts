@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_TURBINE_MODEL } from './constants'
+import { startFlowOf } from './turbineModel'
 import { getSetting, refSpaceConfig, setSetting, toRefFlow, TURBINE_FIELDS, turbinePreview, validateTurbineModel } from './turbineSettings'
 import type { TurbineModel } from './types'
 
@@ -125,9 +126,10 @@ describe('station de référence : équivalence des débits', () => {
   it('exprime les seuils du modèle en débit de la station de référence', () => {
     const c = refSpaceConfig(fresh())
     expect(c.refCode).toBe('O469251003')
-    expect(c.startFlow).toBeCloseTo(22.24, 1)
+    const m = fresh()
+    expect(c.startFlow).toBeCloseTo((startFlowOf(m) - m.defaultOffset) / m.defaultGain, 2)
     expect(c.minFlow).toBeLessThanOrEqual(c.startFlow)
     expect(c.maxFlow).toBeGreaterThan(c.startFlow)
-    expect(c.propagationMin).toBe(65)
+    expect(c.propagationMin).toBe(m.lag.refMin)
   })
 })

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_TURBINE_MODEL as M } from './constants'
+import { TEST_TURBINE_MODEL as M } from '../test/turbineFixture'
+import { DEFAULT_TURBINE_MODEL as D } from './constants'
 import { calibrateSite, dropFrozen, lagMinutes, rideThrough, siteFlowSeries } from './siteFlow'
 import type { SeriesPoint, SiteCalibration } from './types'
 
@@ -180,5 +181,14 @@ describe('rideThrough', () => {
   it('sans durée de maintien, la série est inchangée', () => {
     const s = series(60)
     expect(rideThrough(s, 12.55, 0)).toBe(s)
+  })
+})
+
+describe('calage par défaut (analyse du 22/11/2026)', () => {
+  it('convertit le pic de 15,8 m³/s de Lavaur en ~23,4 m³/s au barrage, 100 min plus tard', () => {
+    const cal: SiteCalibration = { gain: D.defaultGain, offset: D.defaultOffset, sigma: 1, pairs: 0, fitted: false }
+    const [p] = siteFlowSeries([{ t: new Date(NOW).toISOString(), y: 15.8 }], cal, D)
+    expect(p!.y).toBeCloseTo(23.38, 1)
+    expect(Date.parse(p!.t) - NOW).toBe(100 * MIN)
   })
 })

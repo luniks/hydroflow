@@ -14,7 +14,7 @@ const MIN_GAIN_SPREAD = 2
 const DEFAULT_SIGMA = 2.5
 const MIN_SIGMA = 0.5
 /** Bornes du gain : le rapport entre les deux stations varie (travaux, repartition des apports), pas de facon extreme. */
-const GAIN_BOUNDS = [0.35, 0.9] as const
+const GAIN_BOUNDS = [0.35, 1.5] as const
 /**
  * Duree (min) a partir de laquelle une valeur strictement identique est consideree figee (capteur bloque, valeur
  * de remplacement) : sur un cours d'eau qui bouge, la meme valeur plus de 90 min est suspecte.

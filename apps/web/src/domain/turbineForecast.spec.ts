@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_TURBINE_MODEL as M } from './constants'
+import { TEST_TURBINE_MODEL as M } from '../test/turbineFixture'
 import { normalCdf, probabilityIn, runningMin, turbineForecast } from './turbineForecast'
 import { powerKw } from './turbineModel'
 import type { SeriesPoint } from './types'

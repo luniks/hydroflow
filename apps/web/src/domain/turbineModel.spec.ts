@@ -165,12 +165,13 @@ describe('normTurbineModel', () => {
 
 describe('cloneTurbineModel', () => {
   it('ne partage aucun objet imbriqué avec l’original', () => {
+    const refMin = M.lag.refMin
     const c = cloneTurbineModel(M)
     expect(c).toEqual(M)
     c.lag.refMin = 1
     c.tailRating.a = 1
     c.efficiencyCurve[0]![1] = 0.1
-    expect(M.lag.refMin).toBe(65)
+    expect(M.lag.refMin).toBe(refMin)
     expect(M.tailRating.a).toBe(0.0476)
     expect(M.efficiencyCurve[0]![1]).toBe(0.05)
   })

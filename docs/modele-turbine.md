@@ -1,6 +1,6 @@
 # Modèle de prévision de la turbine VLH — Saint-Jean-de-Rive (Agout)
 
-> Documentation technique du modèle **v3** implémenté dans `apps/web/src/domain/`
+> Documentation technique du modèle **v4** implémenté dans `apps/web/src/domain/`
 > (`turbineModel.ts`, `siteFlow.ts`, `turbineForecast.ts`, `constants.ts`).
 > Tous les horaires sont en **UTC** sauf mention contraire.
 > Les analyses de calage, journée par journée, sont listées au §8.
@@ -39,7 +39,7 @@ Lecture rapide des quatre étapes :
 
 ```mermaid
 flowchart LR
-    R["Station de référence<br/>O469251003<br/>(amont)"] -- "≈ 65–80 min" --> T["Barrage + turbine VLH<br/>(réserve 5,5 m³/s +<br/>turbiné ≤ 23,5 m³/s)"]
+    R["Station de référence<br/>O469251003<br/>(amont)"] -- "≈ 100 min" --> T["Barrage + turbine VLH<br/>(réserve 5,5 m³/s +<br/>turbiné ≤ 23,5 m³/s)"]
     T -- "≈ 15–35 min" --> D["Station aval<br/>O480252002"]
 ```
 
@@ -57,39 +57,39 @@ Notations utilisées ci-dessous : $q$ débit au barrage (m³/s), $Q_t$ débit tu
 
 ### 3.1 Conversion linéaire
 
-Le débit au barrage n'est pas celui de la station amont : les apports intermédiaires, les prélèvements et les travaux en amont changent le rapport entre les deux. Le modèle utilise une droite :
+Le débit au barrage n'est pas celui de la station amont : les apports intermédiaires non mesurés (notamment le Dadou, qui rejoint l'Agout ~1,5 km en amont de la turbine) s'ajoutent au débit de la station, dont les mesures ont changé avec les travaux. Le modèle utilise une droite :
 
 $$ q_{site} = \max\bigl(0,\; g\cdot q_{ref} + o\bigr) $$
 
-avec `defaultGain` $g = 0{,}67$ et `defaultOffset` $o = -3{,}4$ m³/s.
+avec `defaultGain` $g = 1{,}1$ et `defaultOffset` $o = 6{,}0$ m³/s (le décalage représente les apports non mesurés : le débit à l'aval vaut ~7 m³/s quand Lavaur lit 1 à 2 m³/s).
 
 ![Conversion amont → barrage](img/fig4_conversion.png)
 
-La droite coupe le seuil de démarrage (11,49 m³/s) pour un débit amont d'environ **22 m³/s**.
+La droite coupe le seuil de démarrage (11,49 m³/s) pour un débit amont d'environ **5 m³/s**.
 
 ### 3.2 Délai de propagation
 
-L'onde met du temps à descendre de la station amont à la turbine, et **plus longtemps quand le débit est faible** :
+L'onde met du temps à descendre de la station amont à la turbine (~100 min). La loi prévoit un délai **plus long quand le débit est faible**, mais l'exposant est à 0 depuis la v4 : le 22/11, le délai ne dépend pas mesurablement du débit entre 5 et 16 m³/s à Lavaur.
 
 $$ L(q_{ref}) = \min\!\Bigl(L_{max},\; L_0\cdot \max\bigl(1,\tfrac{q_{0}}{q_{ref}}\bigr)^{\alpha}\Bigr) $$
 
 | Symbole | Paramètre | Valeur |
 |---|---|---|
-| $L_0$ | `lag.refMin` | 65 min |
+| $L_0$ | `lag.refMin` | 100 min |
 | $q_0$ | `lag.refFlow` | 30 m³/s |
-| $\alpha$ | `lag.exponent` | 0,25 |
+| $\alpha$ | `lag.exponent` | 0 (délai constant) |
 | $L_{max}$ | `lag.maxMin` | 150 min |
 
 ![Loi du délai](img/fig3_delai.png)
 
-Chaque mesure amont est convertie, puis **décalée de son propre délai**. Comme le délai diminue quand le débit monte, une montée « rattrape » les valeurs qui la précèdent (front raide) ; les arrivées sont alors espacées d'au moins 1 minute pour garder une série croissante en temps (`siteFlowSeries`).
+Chaque mesure amont est convertie, puis **décalée de son propre délai**. Si le délai diminue quand le débit monte (exposant > 0), une montée « rattrape » les valeurs qui la précèdent (front raide) ; les arrivées sont alors espacées d'au moins 1 minute pour garder une série croissante en temps (`siteFlowSeries`).
 
 ### 3.3 Calage glissant sur la station aval (optionnel)
 
 `calibrateSite` compare, sur les **72 dernières heures**, le débit amont décalé et le débit aval mesuré :
 
 1. Couples $(x_i, y_i)$ = (débit amont décalé, débit aval) ; le décalage vers l'aval utilise `downLagRatio` = 17,73/15,35 ≈ 1,155 (rapport des distances de lit). Les séries **figées** (valeur identique > 90 min) sont écartées. Il faut au moins 24 couples.
-2. Régression : gain $g_{fit}=\dfrac{\sum (x-\bar x)(y-\bar y)}{\sum (x-\bar x)^2}$ (seulement si `fitGain` est vrai et si l'écart-type de $x$ ≥ 2, borné à [0,35 ; 0,9]) ; décalage $o_{fit}=\bar y-g\bar x$.
+2. Régression : gain $g_{fit}=\dfrac{\sum (x-\bar x)(y-\bar y)}{\sum (x-\bar x)^2}$ (seulement si `fitGain` est vrai et si l'écart-type de $x$ ≥ 2, borné à [0,35 ; 1,5]) ; décalage $o_{fit}=\bar y-g\bar x$.
 3. Correction du biais sur les **3 dernières heures**.
 4. Mélange avec les valeurs par défaut selon `calibrationWeight` $w$ :
 
@@ -241,9 +241,9 @@ Prévision émise le 08/11 à 14h30 UTC, au pic du cycle de l'après-midi :
 | `tailRefLevel` | 0,45 m | Seuil de remontée du niveau aval |
 | `headCorrection` | 0 m | Correction de chute (définition non confirmée) |
 | `tailRating` | a = 0,0476, b = 1 | Remontée du niveau aval en fonction du débit |
-| `lag` | refMin 65, refFlow 30, exposant 0,25, maxMin 150 | Délai de propagation |
+| `lag` | refMin 100, refFlow 30, exposant 0, maxMin 150 | Délai de propagation |
 | `downLagRatio` | 17,73 / 15,35 | Rapport de distances aval/turbine |
-| `defaultGain` / `defaultOffset` | 0,67 / −3,4 | Conversion amont → barrage |
+| `defaultGain` / `defaultOffset` | 1,1 / 6,0 | Conversion amont → barrage |
 | `fitGain` | faux | Le calage n'ajuste pas le gain |
 | `calibrationWeight` | 0 | Poids du calage glissant |
 | `optimalShare` | 0,8 | Zone optimale = ≥ 80 % du nominal |
@@ -259,9 +259,12 @@ Une doc par journée d'analyse, avec les données, la version du modèle utilis�
 | 29/10/2026 | v1 (initiale) | [`analyse-2026-10-29.md`](analyse-2026-10-29.md) |
 | 30/10/2026 | v1 | [`analyse-2026-10-30.md`](analyse-2026-10-30.md) |
 | 31/10/2026 | v1 → v2 | [`analyse-2026-10-31.md`](analyse-2026-10-31.md) |
-| 08/11/2026 | v2 → **v3 (version décrite ici)** | [`analyse-2026-11-08.md`](analyse-2026-11-08.md) |
+| 08/11/2026 | v2 → v3 | [`analyse-2026-11-08.md`](analyse-2026-11-08.md) |
+| 22/11/2026 | v3 → **v4 (version décrite ici)** | [`analyse-2026-11-22.md`](analyse-2026-11-22.md) |
 
 Résultats de la version v3 sur le cycle de l'après-midi et du soir du 08/11 (relevés minute par minute) : RMSE de puissance 51 kW, débit au barrage à 2,1 m³/s près ; sur le cycle du matin du 31/10 : RMSE 33 kW. Détail et limites dans la doc du 08/11.
+
+Résultats de la version v4 sur le 22/11 (station de référence de Lavaur modifiée, ancien calage inopérant) : sur le cycle du soir, RMSE de puissance 27 kW (v3 : 191 kW, aucun démarrage prévu), énergie 301 / 320 kWh, marche/arrêt correct à 100 % ; le cycle de l'après-midi (140 kW) n'est pas expliqué par la station de référence. Détail dans la doc du 22/11.
 
 ---
 
@@ -278,7 +281,7 @@ Résultats de la version v3 sur le cycle de l'après-midi et du soir du 08/11 (r
 
 1. **Débit au barrage à fort débit** : le 08/11 au matin, la station aval affichait ~31 m³/s alors que la turbine ne turbinait que 20 à 20,5 m³/s (soit 26 m³/s avec la réserve) ; la chute mesurée (2,51 m nette) correspond à un débit au barrage d'environ 28 m³/s. Le modèle donne ~430 kW pour 31 m³/s, ce qui est cohérent avec les mesures (417 à 430 kW), mais l'origine des ~2 à 5 m³/s d'écart (surverse, autre passage) n'est pas établie.
 2. **Extrapolations** : rendement et chute au-dessus de 23 m³/s turbinés (~29 m³/s au barrage) ; le débit d'arrêt en crue (51 m³/s) en dépend. Il manque des relevés SCADA à pleine capacité.
-3. **Gain amont → barrage** : 0,67 / −3,4, cohérent sur les journées du 30/10, 31/10 et 08/11 avec la station aval (`aval ≈ 0,67·amont(t−95 min) − 4,4`), mais le 30/10 la puissance mesurée était plus faible que celle donnée par le modèle pour le même débit (réglages de la turbine antérieurs au 08/11).
+3. **Gain amont → barrage** : 1,1 / 6,0 depuis le 22/11, calé sur un seul cycle (le gain et le décalage forment une crête : 1,0–1,2 / 5,5–6,5 donnent des résultats proches). La station de Lavaur est désormais bruitée (±2 m³/s à bas débit, ~26 % de mesures manquantes) et une partie des apports (Dadou) n'est pas mesurée : à reconfirmer sur d'autres journées. Les valeurs 0,67 / −3,4 de la v3 valaient pour l'ancienne station (débits surestimés) et ne s'appliquent plus.
 4. **`calibrationWeight`** : 0 (valeurs fixes) ou une valeur partielle (0,2–0,5) pour absorber les changements de régime, à trancher après validation sur d'autres journées.
 5. **`headCorrection`** : sa définition n'est pas confirmée ; elle vaut 0 aujourd'hui.
 6. **Régime réduit** (`reducedPowerKw`, `reducedMin`) : le conserver désactivé ou le supprimer ?
@@ -313,7 +316,7 @@ pour minute = 0, 5, …, 120 :
 | Puissance maximale | 450 kW (plafond nominal) vers 29 m³/s au barrage |
 | Zone optimale (≥ 360 kW) | 21,2 – 40,2 m³/s |
 | Débit d'arrêt en crue ($H<1{,}5$ m) | ≈ 51 m³/s (extrapolé) |
-| Débit amont équivalent au seuil de démarrage | ≈ 22 m³/s |
+| Débit amont équivalent au seuil de démarrage | ≈ 5 m³/s |
 | Rampe max par pas de 5 min | 60 kW |
 
 ## Annexe C — Fichiers de code
