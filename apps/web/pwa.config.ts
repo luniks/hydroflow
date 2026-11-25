@@ -1,5 +1,7 @@
 import type { VitePWAOptions } from 'vite-plugin-pwa'
 
+const BASE = process.env.VITE_BASE ?? '/'
+
 // Aligne sur --bg (theme sombre) de styles/tokens.css
 const THEME_COLOR = '#0f172a'
 
@@ -11,9 +13,9 @@ export const pwaOptions: Partial<VitePWAOptions> = {
     short_name: 'Hydroflow',
     description: 'Suivi et prévision de production hydroélectrique, St-Jean-de-Rive',
     lang: 'fr',
-    id: '/',
-    start_url: '/',
-    scope: '/',
+    id: BASE,
+    start_url: BASE,
+    scope: BASE,
     display: 'standalone',
     theme_color: THEME_COLOR,
     background_color: THEME_COLOR,
@@ -26,7 +28,7 @@ export const pwaOptions: Partial<VitePWAOptions> = {
   },
   workbox: {
     globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-    navigateFallback: '/index.html',
+    navigateFallback: `${BASE}index.html`,
     cleanupOutdatedCaches: true,
     runtimeCaching: [
       {

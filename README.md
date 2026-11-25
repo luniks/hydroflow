@@ -33,6 +33,19 @@ npm run dev   # web (5173) + proxy (3000) en parallèle
 | `npm test`          | Tests unitaires de tous les workspaces   |
 | `npm run coverage`  | Tests avec rapport de couverture         |
 
+## Déploiement
+
+Déploiement manuel (cPanel, SSH + rsync) depuis un tag de version, avec une clé SSH déjà configurée :
+
+```bash
+cp scripts/.env.example scripts/.env.production   # adapter (non versionné, sans secret)
+git tag v0.3.0
+npm run deploy -- --dry-run                         # simulation
+npm run deploy
+```
+
+Le script teste, build la webapp (`VITE_BASE`, URL du proxy), synchronise `apps/web/dist` et le proxy, puis redémarre le proxy (`tmp/restart.txt`, Passenger). Les variables du proxy (`BASE_PATH`, `ALLOWED_ORIGINS`…) se règlent dans cPanel → *Setup Node.js App*.
+
 ## Sources de données
 
 [Hub'Eau Hydrométrie](https://hubeau.eaufrance.fr/) · [Open-Meteo](https://open-meteo.com/) · [Vigicrues](https://www.vigicrues.gouv.fr/) (via le proxy)
